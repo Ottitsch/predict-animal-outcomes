@@ -43,9 +43,9 @@ EXPECTED_OUTCOME_TYPES = [
 
 # --- Animal Type distribution ---
 
-def test_animal_type_values_in_expected_set(gx_batch):
+def test_animal_type_values_in_expected_set(validate):
     """Every Animal Type value must be one of the five known categories."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToBeInSet(
             column="Animal Type", value_set=EXPECTED_ANIMAL_TYPES
         )
@@ -53,19 +53,21 @@ def test_animal_type_values_in_expected_set(gx_batch):
     assert result.success, f"Unexpected Animal Type values: {result.result}"
 
 
-def test_animal_type_dogs_and_cats_dominate(df):
+def test_animal_type_dogs_and_cats_dominate(df, inspect_rows):
     """Dogs and Cats together should make up at least 90% of records."""
     total = len(df)
     dogs_cats = df["Animal Type"].isin(["Dog", "Cat"]).sum()
     ratio = dogs_cats / total
+    if ratio < 0.90:
+        inspect_rows(~df["Animal Type"].isin(["Dog", "Cat"]), "not Dog or Cat")
     assert ratio >= 0.90, f"Dogs+Cats ratio is {ratio:.2%}, expected >= 90%"
 
 
 # --- Outcome Type distribution ---
 
-def test_outcome_type_values_in_expected_set(gx_batch):
+def test_outcome_type_values_in_expected_set(validate):
     """Outcome Type values should belong to the known set (allowing up to 1% unknown for future additions)."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToBeInSet(
             column="Outcome Type", value_set=EXPECTED_OUTCOME_TYPES, mostly=0.99
         )
@@ -73,10 +75,12 @@ def test_outcome_type_values_in_expected_set(gx_batch):
     assert result.success, f"Unexpected Outcome Type values: {result.result}"
 
 
-def test_outcome_type_adoption_rate_in_range(df):
+def test_outcome_type_adoption_rate_in_range(df, inspect_rows):
     """Adoption rate should be between 30% and 60%, consistent with Austin's no kill policy."""
     non_null = df["Outcome Type"].dropna()
     adoption_rate = (non_null == "Adoption").sum() / len(non_null)
+    if not (0.30 <= adoption_rate <= 0.60):
+        inspect_rows(df["Outcome Type"] == "Adoption", "adoptions")
     assert 0.30 <= adoption_rate <= 0.60, (
         f"Adoption rate is {adoption_rate:.2%}, expected between 30% and 60%"
     )

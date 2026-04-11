@@ -1,5 +1,15 @@
 # predict-animal-outcomes
 
+## quickstart
+
+```bash
+python -m venv .venv && .venv/Scripts/activate
+pip install -r requirements.txt
+python prepare_data.py
+pytest tests/
+pytest tests/ --inspect -s   # show failing rows
+```
+
 ## todo:  
 1. make a clean dataset that handles the null values on Outcome Type  
 2. drop Outcome Subtype - dont care about it and too big of a hint for the model

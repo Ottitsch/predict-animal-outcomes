@@ -26,39 +26,39 @@ allow up to 50% nulls.
 
 Additional info:
 I dont test "Outcome Subtype" because I dont care about it and plan on dropping it.
-(I only want to predict "Outcome Type" and "Outcome Subtype" would be too much of 
+(I only want to predict "Outcome Type" and "Outcome Subtype" would be too much of
 a hint for the model)
 """
 import great_expectations as gx
 
 
-def test_animal_id_not_null(gx_batch):
+def test_animal_id_not_null(validate):
     """Animal ID is assigned at intake and must never be null."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Animal ID", mostly=1.0)
     )
     assert result.success, f"Animal ID has unexpected nulls: {result.result}"
 
 
-def test_animal_type_not_null(gx_batch):
+def test_animal_type_not_null(validate):
     """Animal Type is recorded at intake and must never be null."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Animal Type", mostly=1.0)
     )
     assert result.success, f"Animal Type has unexpected nulls: {result.result}"
 
 
-def test_outcome_type_not_null(gx_batch):
+def test_outcome_type_not_null(validate):
     """Outcome Type must never be null."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Outcome Type", mostly=1.0)
     )
     assert result.success, f"Outcome Type has unexpected nulls: {result.result}"
 
 
-def test_datetime_not_null(gx_batch):
+def test_datetime_not_null(validate):
     """DateTime must never be null."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="DateTime", mostly=1.0)
     )
     assert result.success, f"DateTime has unexpected nulls: {result.result}"
@@ -67,57 +67,57 @@ def test_datetime_not_null(gx_batch):
 # --- Relaxed null checks for remaining columns ---
 
 
-def test_date_of_birth_mostly_not_null(gx_batch):
+def test_date_of_birth_mostly_not_null(validate):
     """Date of Birth should be present for at least 95% of records."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Date of Birth", mostly=0.95)
     )
     assert result.success, f"Date of Birth has >5% nulls: {result.result}"
 
 
-def test_name_mostly_not_null(gx_batch):
+def test_name_mostly_not_null(validate):
     """Name may be missing for unnamed animals, but should be present for at least 50%."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Name", mostly=0.50)
     )
     assert result.success, f"Name has >50% nulls: {result.result}"
 
 
-def test_monthyear_mostly_not_null(gx_batch):
+def test_monthyear_mostly_not_null(validate):
     """MonthYear should be present for at least 95% of records."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="MonthYear", mostly=0.95)
     )
     assert result.success, f"MonthYear has >5% nulls: {result.result}"
 
 
-def test_sex_upon_outcome_mostly_not_null(gx_batch):
+def test_sex_upon_outcome_mostly_not_null(validate):
     """Sex upon Outcome should be present for at least 95% of records."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Sex upon Outcome", mostly=0.95)
     )
     assert result.success, f"Sex upon Outcome has >5% nulls: {result.result}"
 
 
-def test_age_upon_outcome_mostly_not_null(gx_batch):
+def test_age_upon_outcome_mostly_not_null(validate):
     """Age upon Outcome should be present for at least 95% of records."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Age upon Outcome", mostly=0.95)
     )
     assert result.success, f"Age upon Outcome has >5% nulls: {result.result}"
 
 
-def test_breed_mostly_not_null(gx_batch):
+def test_breed_mostly_not_null(validate):
     """Breed should be present for at least 95% of records."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Breed", mostly=0.95)
     )
     assert result.success, f"Breed has >5% nulls: {result.result}"
 
 
-def test_color_mostly_not_null(gx_batch):
+def test_color_mostly_not_null(validate):
     """Color should be present for at least 95% of records."""
-    result = gx_batch.validate(
+    result = validate(
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Color", mostly=0.95)
     )
     assert result.success, f"Color has >5% nulls: {result.result}"
