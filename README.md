@@ -2,6 +2,8 @@
 
 ## quickstart
 
+Requires Python 3.13.3.
+
 ```bash
 python -m venv .venv && .venv/Scripts/activate
 pip install -r requirements.txt
