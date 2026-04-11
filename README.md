@@ -10,6 +10,7 @@ pip install -r requirements.txt
 python prepare_data.py
 pytest tests/
 pytest tests/ --inspect -s   # show failing rows
+python -c "import pyarrow.parquet as pq; print(pq.read_schema('data/dataset.parquet'))"  # inspect parquet schema and metadata
 ```
 
 ## todo:  
