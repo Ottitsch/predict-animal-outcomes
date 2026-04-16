@@ -17,6 +17,8 @@ python -c "import pyarrow.parquet as pq; print(pq.read_schema('data/dataset.parq
 1. make a clean dataset that handles the null values on Outcome Type  
 2. drop Outcome Subtype - dont care about it and too big of a hint for the model.  
 3. ask: i didnt create a manifest.json for when we spawn the parquet and just save a creation time, is this ok or trash.  
+4. I didnt do splitting - so my tests aren't Ideal:
+- how I would change it is deciding Im gonna use the data from 2013 to 2014 as my golden data
 
 ## test output
 

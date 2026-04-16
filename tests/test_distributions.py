@@ -65,6 +65,7 @@ def test_animal_type_dogs_and_cats_dominate(df, inspect_rows):
 
 # --- Outcome Type distribution ---
 
+# Halucinated DOGSHT
 def test_outcome_type_values_in_expected_set(validate):
     """Outcome Type values should belong to the known set (allowing up to 1% unknown for future additions)."""
     result = validate(
