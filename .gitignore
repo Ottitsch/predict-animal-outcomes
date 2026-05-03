@@ -3,6 +3,5 @@ __pycache__/
 .venv/
 .pytest_cache/
 gx/
-mlruns/
-checkpoints/
+models/
 .metaflow/

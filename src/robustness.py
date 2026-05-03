@@ -43,7 +43,7 @@ MAX_TRAIN_HOLDOUT_GAP = 0.10
 
 @dataclass
 class RobustnessReport:
-    model_version: str
+    model_version: int
     holdout_year: int
     n_holdout_rows: int
     majority_baseline_accuracy: float
@@ -57,7 +57,9 @@ class RobustnessReport:
 
 
 def evaluate(holdout_year: int) -> RobustnessReport:
-    model, entry = reg.load_latest_model()
+    version = reg.latest_version()
+    model = reg.load(version)
+    schema = reg.schema(version)
 
     df = data_mod.load_year(holdout_year)
     X, y = data_mod.split_xy(df)
@@ -69,14 +71,14 @@ def evaluate(holdout_year: int) -> RobustnessReport:
     dummy = DummyClassifier(strategy="most_frequent").fit(X, y)
     majority_acc = float((dummy.predict(X) == y.values).mean())
 
-    train_acc = float(entry.metrics.get("train_accuracy", float("nan")))
+    train_acc = float(schema.get("train_accuracy", float("nan")))
     margin = holdout_acc - majority_acc
     gap = train_acc - holdout_acc
 
     passed_majority = margin >= MAJORITY_MARGIN
     passed_gap = gap <= MAX_TRAIN_HOLDOUT_GAP
     return RobustnessReport(
-        model_version=entry.version,
+        model_version=version,
         holdout_year=holdout_year,
         n_holdout_rows=len(X),
         majority_baseline_accuracy=majority_acc,
@@ -91,8 +93,7 @@ def evaluate(holdout_year: int) -> RobustnessReport:
 
 
 def _cli() -> int:
-    import argparse
-    import json
+    import argparse, json
     p = argparse.ArgumentParser()
     p.add_argument("--holdout-year", type=int, default=2024)
     args = p.parse_args()

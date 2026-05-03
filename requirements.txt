@@ -8,4 +8,3 @@ pytest==9.0.3
 metaflow==2.19.24
 scikit-learn==1.8.0
 skops==0.14.0
-mlflow==3.11.1
