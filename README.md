@@ -1,44 +1,131 @@
 # predict-animal-outcomes
 
-## quickstart
+Predict the outcome of an Austin Animal Center intake (Adoption / Transfer /
+Return to Owner / ...).
 
-Requires Python 3.13.3.
+## Quickstart
+
+Requires Python 3.11+ (developed against 3.11.15).
 
 ```bash
-python -m venv .venv && .venv/Scripts/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+
+# Materialise the parquet datasets (raw + per-year clean splits).
 python prepare_data.py
+
+# Run the data quality tests on the raw dataset.
 pytest tests/
-pytest tests/ --inspect -s   # show failing rows
-python -c "import pyarrow.parquet as pq; print(pq.read_schema('data/dataset.parquet'))"  # inspect parquet schema and metadata
+
+# Run the full flow: data tests -> train -> robustness validation.
+python flow.py run
+
+# Demonstrate interruption handling: training fails after epoch 3, dumps a
+# checkpoint, the flow exits non-zero. Re-run with --resume_from to continue.
+python flow.py run --epochs 8 --interrupt_at_epoch 3
+python flow.py run --epochs 8 --resume_from checkpoints/<run_id>.skops
 ```
 
-## todo:  
-1. make a clean dataset that handles the null values on Outcome Type  
-2. drop Outcome Subtype - dont care about it and too big of a hint for the model.  
-3. ask: i didnt create a manifest.json for when we spawn the parquet and just save a creation time, is this ok or trash.  
-4. I didnt do splitting - so my tests aren't Ideal:
-- how I would change it is deciding Im gonna use the data from 2013 to 2014 as my golden data
-
-## test output
+## Repository layout
 
 ```
-tests/test_distributions.py::test_animal_type_values_in_expected_set PASSED [  6%]
-tests/test_distributions.py::test_animal_type_dogs_and_cats_dominate PASSED [ 13%]
-tests/test_distributions.py::test_outcome_type_values_in_expected_set PASSED [ 20%]
-tests/test_distributions.py::test_outcome_type_adoption_rate_in_range PASSED [ 26%]
-tests/test_missing_values.py::test_animal_id_not_null PASSED             [ 33%]
-tests/test_missing_values.py::test_animal_type_not_null PASSED           [ 40%]
-tests/test_missing_values.py::test_outcome_type_not_null FAILED          [ 46%]
-tests/test_missing_values.py::test_datetime_not_null PASSED              [ 53%]
-tests/test_missing_values.py::test_date_of_birth_mostly_not_null PASSED  [ 60%]
-tests/test_missing_values.py::test_name_mostly_not_null PASSED           [ 66%]
-tests/test_missing_values.py::test_monthyear_mostly_not_null PASSED      [ 73%]
-tests/test_missing_values.py::test_sex_upon_outcome_mostly_not_null PASSED [ 80%]
-tests/test_missing_values.py::test_age_upon_outcome_mostly_not_null PASSED [ 86%]
-tests/test_missing_values.py::test_breed_mostly_not_null PASSED          [ 93%]
-tests/test_missing_values.py::test_color_mostly_not_null PASSED          [100%]
-
-FAILED tests/test_missing_values.py::test_outcome_type_not_null
-1 failed, 14 passed
+prepare_data.py            CSV -> parquet (raw + per-full-year clean splits)
+flow.py                    Metaflow flow: data_tests -> train -> robustness
+src/
+  data.py                  per-year loaders + feature schema
+  preprocessing.py         module-level helpers used by the sklearn pipeline
+  training.py              SGDClassifier training, skops save, MLflow logging,
+                           checkpoint+resume on KeyboardInterrupt
+  pyfunc_model.py          MLflow PyFunc wrapper around the skops artifact
+  registry.py              thin wrapper over MLflow Model Registry (list/load/schema)
+  robustness.py            holdout-year + majority-baseline validation
+tests/                     data quality tests (pytest + great_expectations)
+requirements/              per-step requirements.txt for isolated execution
+data/
+  dataset.parquet          full raw dataset (used by tests/)
+  by_year/<year>.parquet   cleaned per-year splits (2014-2024) for training/eval
+mlruns/                    MLflow tracking + Model Registry (file backend)
+checkpoints/               partial models from interrupted training runs
 ```
+
+## Design notes
+
+### Datasets (per-year clean splits)
+`prepare_data.py` produces a separate parquet per *full* calendar year
+(2014-2024). 2013 (Oct-onward) and 2025 (Jan-May) are partial years and
+excluded so per-year evaluations are apples-to-apples. The per-year files have
+``Outcome Type`` nulls dropped (the prediction target must be present) and
+``Outcome Subtype`` removed (it leaks the label).
+
+### Model and target
+- **Target**: `Outcome Type` (multiclass: Adoption, Transfer, Return to Owner, ...).
+- **Features**: `Animal Type`, `Sex upon Outcome`, `Breed`, `Color`, `age_days`
+  (parsed from `Age upon Outcome`).
+- **Model**: streaming multinomial logistic regression
+  (`SGDClassifier(loss="log_loss")`) trained over a configurable number of
+  epochs via `partial_fit`. Deliberately small -- we just need an artifact to
+  version, load, and validate.
+
+### Serialization
+The trained `Pipeline(preprocessor + classifier)` is serialized with **skops**,
+which is purpose-built for sklearn objects and avoids pickle's
+arbitrary-code-execution risk on load.
+
+### Versioning (MLflow Model Registry)
+The training step calls `mlflow.pyfunc.log_model(..., registered_model_name=...)`
+which produces a real MLflow *logged_model* and registers a new version of
+`animal_outcome_classifier`. Each version's artifact bundle includes:
+- `artifacts/skops_model/model.skops` -- the model itself.
+- `artifacts/schema/schema.json` -- input/output schema (column lists, target,
+  classes).
+- `artifacts/dependencies/train.txt` -- pinned code dependencies.
+- `MLmodel` + `python_env.yaml` (auto-generated by MLflow).
+
+`src/registry.py` wraps the three required operations: `list_models()`,
+`load_model_by_version(v)`, `load_schema(v)`.
+
+### Robustness expectation
+`src/robustness.py` evaluates the freshly trained model on a holdout year
+(default 2024, never seen during training) against two thresholds:
+
+1. **Beat the majority-class baseline by >= 5 percentage points.**
+   A `DummyClassifier(strategy="most_frequent")` is the floor below which the
+   model adds no value. 5pp is small enough to survive year-to-year class-mix
+   noise, large enough that a model that merely re-discovers the prior fails.
+
+2. **Train/holdout accuracy gap <= 10 percentage points.**
+   Larger gaps signal overfitting or distribution drift the model hasn't
+   generalised across.
+
+Both thresholds are documented inline in `src/robustness.py`. If the model
+fails either check, that should prompt a real investigation, not a threshold
+tweak.
+
+### Error handling at the training step
+Two failure modes are explicitly handled:
+
+- **Too-small training set (< 1000 rows)** raises `ValueError` *before* any
+  artifact is written. Refusing to produce a junk model is strictly better
+  than logging a warning and registering it: a registered model can be
+  promoted to production by accident, a missing model cannot.
+
+- **Mid-training interruption (`KeyboardInterrupt` -- e.g. SIGINT, power loss)**
+  serialises the partially-trained estimator to
+  `checkpoints/<run_id>.skops`, tags the MLflow run `status=interrupted`, and
+  *does not* register the model. To recover, re-run the flow with
+  `--resume_from <checkpoint-path>`: training reloads the checkpoint, continues
+  from the next epoch, and registers a fresh version on completion. We chose
+  durable-checkpoint + explicit-resume over silent retry because shipping an
+  under-trained model is a worse outcome than a noisy failure that forces a
+  human to acknowledge the interruption.
+
+## Per-step dependencies
+
+Each flow step has its own pinned requirements file under `requirements/` so
+the steps can be executed in isolation (e.g. inside containers):
+- `requirements/data_tests.txt`
+- `requirements/train.txt`
+- `requirements/robustness.txt`
+
+The top-level `requirements.txt` is the union, used by the local
+`python flow.py run` invocation.

@@ -1,5 +1,5 @@
 """
-Pre-training data quality test: attribute distributions.
+Data quality test: attribute distributions.
 
 We test the distributions of two categorical attributes against expectations
 derived from domain knowledge about the Austin Animal Center.

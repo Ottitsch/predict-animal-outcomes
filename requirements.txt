@@ -1,4 +1,11 @@
+# Top-level requirements for running the full Metaflow flow locally.
+# Per-step requirements live under requirements/ for environments that build
+# or run each step in isolation (e.g. Docker containers).
 pandas==3.0.2
 pyarrow==23.0.1
-great_expectations==1.16.0
+great_expectations==1.17.0
 pytest==9.0.3
+metaflow==2.19.24
+scikit-learn==1.8.0
+skops==0.14.0
+mlflow==3.11.1

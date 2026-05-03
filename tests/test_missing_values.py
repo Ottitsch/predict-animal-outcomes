@@ -1,5 +1,5 @@
 """
-Pre-training data quality test: missing / null values.
+Data quality test: missing / null values.
 
 We test all columns for null rates against documented expectations.
 
