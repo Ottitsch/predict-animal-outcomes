@@ -77,7 +77,7 @@ def evaluate(holdout_year: int) -> RobustnessReport:
 
     passed_majority = margin >= MAJORITY_MARGIN
     passed_gap = gap <= MAX_TRAIN_HOLDOUT_GAP
-    return RobustnessReport(
+    report = RobustnessReport(
         model_version=version,
         holdout_year=holdout_year,
         n_holdout_rows=len(X),
@@ -90,6 +90,8 @@ def evaluate(holdout_year: int) -> RobustnessReport:
         passed_gap=passed_gap,
         passed=passed_majority and passed_gap,
     )
+    reg.attach_run(version, asdict(report))
+    return report
 
 
 def _cli() -> int:

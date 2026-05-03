@@ -22,7 +22,9 @@ Two failure modes are explicitly handled:
 from __future__ import annotations
 
 import platform
+import subprocess
 from dataclasses import dataclass
+from pathlib import Path
 
 from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
@@ -37,6 +39,20 @@ from . import registry as reg
 class TrainResult:
     version: int
     train_accuracy: float
+
+
+def _git_sha() -> str | None:
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=Path(__file__).resolve().parent.parent,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return out.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
 
 
 def _build_pipeline() -> Pipeline:
@@ -80,6 +96,7 @@ def train(train_years: list[int], simulate_interrupt: bool = False) -> TrainResu
             "python": platform.python_version(),
             "requirements_file": "requirements/train.txt",
         },
+        "git_sha": _git_sha(),
         "train_years": train_years,
         "train_accuracy": acc,
     }

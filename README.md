@@ -67,16 +67,29 @@ arbitrary-code-execution risk on load.
 
 ### Versioning (custom file-based registry)
 `src/registry.py` is a small, file-based model registry used in place of
-MLflow. Each registered model lives at `models/v<N>/` with two files:
+MLflow. Each registered model lives at `models/v<N>/`:
 
 - `model.skops` -- the serialized sklearn pipeline.
 - `schema.json` -- input/output contract (column lists, target column,
-  classes), code dependencies (Python version, requirements file), and the
-  recorded train accuracy.
+  classes), code dependencies (Python version, requirements file), the
+  recorded train accuracy, the `git_sha` of the commit it was trained from,
+  and a `created_at` timestamp.
+- `run.json` -- robustness report attached after evaluation
+  (holdout accuracy, baseline accuracy, pass/fail flags).
+
+A flat `models/INDEX.json` is regenerated on every write so the full set of
+registered versions and their key metadata is reviewable from a single
+diff-friendly file.
 
 The registry exposes:
-`list_models()`, `load(version)`, `schema(version)`, plus `latest_version()`
-for the robustness step.
+`list_models()`, `load(version)`, `schema(version)`, `attach_run(version, run)`,
+plus `latest_version()` for the robustness step.
+
+### Raw data integrity
+`raw_data/SHA256SUMS` records the digest of the source CSV. `prepare_data.py`
+checks it on every run and refuses to proceed on a mismatch, so a silent
+dataset swap is loud rather than silently re-poisoning every downstream
+artifact. Regenerate the file only when the source is intentionally updated.
 
 ### Robustness expectation
 `src/robustness.py` evaluates the freshly trained model on a holdout year

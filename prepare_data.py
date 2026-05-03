@@ -17,6 +17,7 @@ Two artifacts are produced:
 Parquet is chosen for columnar efficiency and for preserving column types so
 that the type of ``DateTime`` does not have to be re-inferred on every read.
 """
+import hashlib
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -25,9 +26,34 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 RAW_CSV = ROOT / "raw_data" / "Austin_Animal_Center_Outcomes__10_01_2013_to_05_05_2025_.csv"
+RAW_SHA = ROOT / "raw_data" / "SHA256SUMS"
 OUTPUT_DIR = ROOT / "data"
 RAW_PARQUET = OUTPUT_DIR / "dataset.parquet"
 BY_YEAR_DIR = OUTPUT_DIR / "by_year"
+
+
+def _verify_raw_sha() -> None:
+    """Fail loudly if the raw CSV doesn't match the recorded SHA256.
+
+    A silent CSV swap would invalidate every downstream artifact (parquet,
+    trained model, tests). Checking once at the entry point is cheap.
+    """
+    if not RAW_SHA.exists():
+        return
+    expected = {}
+    for line in RAW_SHA.read_text().splitlines():
+        digest, name = line.split(maxsplit=1)
+        expected[name.strip()] = digest
+    actual = hashlib.sha256(RAW_CSV.read_bytes()).hexdigest()
+    want = expected.get(RAW_CSV.name)
+    if want is None:
+        return
+    if actual != want:
+        raise RuntimeError(
+            f"SHA mismatch for {RAW_CSV.name}: expected {want}, got {actual}. "
+            f"Refusing to proceed; regenerate {RAW_SHA} only if the source "
+            f"dataset has been intentionally updated."
+        )
 
 # Full calendar years available in the source data. 2013 starts in October and
 # 2025 ends in May, so neither is a full year and both are excluded.
@@ -47,6 +73,7 @@ def prepare() -> None:
     OUTPUT_DIR.mkdir(exist_ok=True)
     BY_YEAR_DIR.mkdir(exist_ok=True)
 
+    _verify_raw_sha()
     df = pd.read_csv(RAW_CSV)
     _write_parquet(df, RAW_PARQUET)
     print(f"Saved {len(df)} rows to {RAW_PARQUET}")
