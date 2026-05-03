@@ -4,7 +4,7 @@ Serialize the raw CSV dataset into Parquet files.
 Two artifacts are produced:
 
 1. ``data/dataset.parquet`` -- the full raw dataset, used by the data quality
-   tests under ``tests/`` (which intentionally exercise the *uncleaned* data).
+   tests under ``tests/`` (which intentionally run against the *uncleaned* data).
 
 2. ``data/by_year/<year>.parquet`` -- a cleaned, per-full-year split used for
    model training and evaluation. Cleaning consists of:

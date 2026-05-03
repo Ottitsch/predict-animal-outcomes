@@ -66,16 +66,15 @@ which is purpose-built for sklearn objects and avoids pickle's
 arbitrary-code-execution risk on load.
 
 ### Versioning (custom file-based registry)
-The task explicitly permits "a very simple own model versioning library" as an
-alternative to MLflow. `src/registry.py` is that. Each registered model lives
-at `models/v<N>/` with two files:
+`src/registry.py` is a small, file-based model registry used in place of
+MLflow. Each registered model lives at `models/v<N>/` with two files:
 
 - `model.skops` -- the serialized sklearn pipeline.
 - `schema.json` -- input/output contract (column lists, target column,
   classes), code dependencies (Python version, requirements file), and the
   recorded train accuracy.
 
-The registry exposes the three required operations:
+The registry exposes:
 `list_models()`, `load(version)`, `schema(version)`, plus `latest_version()`
 for the robustness step.
 

@@ -4,9 +4,6 @@ Tiny file-based model registry.
 Each registered model lives at ``models/v<N>/`` with two files:
   - ``model.skops``   -- the serialized sklearn pipeline (skops, not pickle)
   - ``schema.json``   -- input/output schema + code dependencies
-
-The task green-lights "a very simple own model versioning library" as an
-alternative to MLflow. This is that.
 """
 from __future__ import annotations
 

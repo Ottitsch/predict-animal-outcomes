@@ -1,10 +1,9 @@
 """
 Train a small multinomial logistic-regression classifier and register it.
 
-The model is intentionally tiny -- the task says "type, size or sophistication
-of the model training is for the scope of this exercise irrelevant", so we
-keep it to a one-shot ``LogisticRegression.fit`` over a one-hot-encoded feature
-matrix. The point is to produce an artifact we can version, load, and validate.
+The model is intentionally tiny: a one-shot ``LogisticRegression.fit`` over a
+one-hot-encoded feature matrix. The point is to produce an artifact we can
+version, load, and validate.
 
 Error handling
 ==============
