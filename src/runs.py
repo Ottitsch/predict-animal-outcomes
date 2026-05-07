@@ -11,6 +11,7 @@ crashed run still leaves a partial audit trail on disk.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,11 @@ RUNS_DIR = ROOT / "runs"
 
 
 def _short_git_sha() -> str:
+    # In CI, the full SHA is injected via env var to avoid git safe.directory
+    # errors when the container runs as a different user than the workspace owner.
+    sha_env = os.environ.get("GIT_COMMIT_SHA", "")
+    if sha_env:
+        return sha_env[:7]
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
