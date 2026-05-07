@@ -31,7 +31,10 @@ jobs:
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
-            pao-host:dev run
+            pao-host:dev run --auto-commit False
 
-      - name: push run artifacts
-        run: git push origin main
+      - name: save artifacts
+        run: |
+          git add runs/ models/
+          git commit --no-gpg-sign -m "ci: save run artifacts and model"
+          git push origin main
