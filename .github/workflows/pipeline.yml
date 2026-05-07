@@ -1,0 +1,27 @@
+name: docker-pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: copy docker cli for host image
+        run: cp "$(which docker)" docker-cli-bin
+
+      - name: build images
+        run: bash docker/build.sh
+
+      - name: run pipeline
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}":/work -w /work \
+            -e HOST_PROJECT_DIR="${{ github.workspace }}" \
+            pao-host:dev run
