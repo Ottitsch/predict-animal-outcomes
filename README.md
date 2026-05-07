@@ -38,7 +38,7 @@ src/
 tests/                     data quality tests (pytest + great_expectations)
   runs.py                  per-run dirs + flow.json envelope
 docker/                    Dockerfiles + build script for host + step containers
-requirements/              per-step requirements.txt (one file per container image)
+  requirements/            per-step requirements.txt (one file per container image)
 runs/                      per-flow-run audit trail (auto-committed)
 data/
   raw/                     immutable source CSV + SHA256SUMS
@@ -130,12 +130,12 @@ Two failure modes are explicitly handled:
 
 ## Per-step dependencies
 
-Each flow step has its own pinned requirements file under `requirements/` so
-the steps execute in isolated containers:
-- `requirements/host.txt` (just metaflow, for the driver container)
-- `requirements/data_tests.txt`
-- `requirements/train.txt`
-- `requirements/robustness.txt`
+Each flow step has its own pinned requirements file under `docker/requirements/`
+so the steps execute in isolated containers:
+- `docker/requirements/host.txt` (just metaflow, for the driver container)
+- `docker/requirements/data_tests.txt`
+- `docker/requirements/train.txt`
+- `docker/requirements/robustness.txt`
 
 The top-level `requirements.txt` is the union, used only when running the flow
 host-natively (`USE_CONTAINERS=0 python flow.py run`).
@@ -143,7 +143,7 @@ host-natively (`USE_CONTAINERS=0 python flow.py run`).
 ## Containerized execution
 
 The flow runs as a single host container that spawns a sibling container per
-step. Each step image installs only its own `requirements/<step>.txt`.
+step. Each step image installs only its own `docker/requirements/<step>.txt`.
 
 ```
 host machine

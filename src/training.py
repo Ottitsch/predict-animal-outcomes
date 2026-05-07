@@ -94,7 +94,7 @@ def train(train_years: list[int], simulate_interrupt: bool = False) -> TrainResu
         },
         "code_dependencies": {
             "python": platform.python_version(),
-            "requirements_file": "requirements/train.txt",
+            "requirements_file": "docker/requirements/train.txt",
         },
         "git_sha": _git_sha(),
         "train_years": train_years,

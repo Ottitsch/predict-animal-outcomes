@@ -2,7 +2,7 @@ FROM python:3.13-slim
 
 WORKDIR /work
 
-COPY requirements/robustness.txt /tmp/robustness.txt
+COPY docker/requirements/robustness.txt /tmp/robustness.txt
 RUN pip install --no-cache-dir \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \

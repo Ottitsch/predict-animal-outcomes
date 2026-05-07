@@ -5,7 +5,7 @@ Architecture
 ------------
 The flow is the *driver*. Each step shells out to a step-specific Docker image
 that contains only that step's dependencies (see ``docker/*.Dockerfile`` and
-``requirements/*.txt``). Inputs and outputs are passed via two bind mounts:
+``docker/requirements/*.txt``). Inputs and outputs are passed via two bind mounts:
 
 * ``$HOST_PROJECT_DIR``  -> ``/work``        (the repo; data + models registry)
 * ``$HOST_PROJECT_DIR/runs/<run-id>/<step>`` -> ``/out`` (this step's outputs)
