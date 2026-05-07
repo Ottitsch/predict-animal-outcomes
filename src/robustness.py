@@ -43,7 +43,7 @@ MAX_TRAIN_HOLDOUT_GAP = 0.10
 
 @dataclass
 class RobustnessReport:
-    model_version: int
+    run_id: str
     holdout_year: int
     n_holdout_rows: int
     majority_baseline_accuracy: float
@@ -56,10 +56,9 @@ class RobustnessReport:
     passed: bool
 
 
-def evaluate(holdout_year: int) -> RobustnessReport:
-    version = reg.latest_version()
-    model = reg.load(version)
-    schema = reg.schema(version)
+def evaluate(holdout_year: int, run_id: str) -> RobustnessReport:
+    model = reg.load(run_id)
+    schema = reg.schema(run_id)
 
     df = data_mod.load_year(holdout_year)
     X, y = data_mod.split_xy(df)
@@ -78,7 +77,7 @@ def evaluate(holdout_year: int) -> RobustnessReport:
     passed_majority = margin >= MAJORITY_MARGIN
     passed_gap = gap <= MAX_TRAIN_HOLDOUT_GAP
     report = RobustnessReport(
-        model_version=version,
+        run_id=run_id,
         holdout_year=holdout_year,
         n_holdout_rows=len(X),
         majority_baseline_accuracy=majority_acc,
@@ -90,19 +89,23 @@ def evaluate(holdout_year: int) -> RobustnessReport:
         passed_gap=passed_gap,
         passed=passed_majority and passed_gap,
     )
-    reg.attach_run(version, asdict(report))
     return report
 
 
 def _cli() -> int:
     import argparse, json
     from pathlib import Path
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(
+        description="Evaluate the model produced by a given run. Invoked by "
+                    "flow.py inside the robustness container.",
+    )
+    p.add_argument("--run-id", required=True,
+                   help="Run id whose model should be evaluated.")
     p.add_argument("--holdout-year", type=int, default=2024)
     p.add_argument("--out-dir", default=None,
                    help="If set, write the robustness report JSON here.")
     args = p.parse_args()
-    report = evaluate(args.holdout_year)
+    report = evaluate(args.holdout_year, args.run_id)
     payload = asdict(report)
     print(json.dumps(payload, indent=2))
     if args.out_dir:

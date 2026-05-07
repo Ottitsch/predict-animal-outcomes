@@ -7,7 +7,7 @@ The flow is the *driver*. Each step shells out to a step-specific Docker image
 that contains only that step's dependencies (see ``docker/*.Dockerfile`` and
 ``docker/requirements/*.txt``). Inputs and outputs are passed via two bind mounts:
 
-* ``$HOST_PROJECT_DIR``  -> ``/work``        (the repo; data + models registry)
+* ``$HOST_PROJECT_DIR``  -> ``/work``        (the repo; data + per-run model dirs)
 * ``$HOST_PROJECT_DIR/runs/<run-id>/<step>`` -> ``/out`` (this step's outputs)
 
 When the host itself runs inside a container (the ``pao-host`` image),
@@ -226,6 +226,7 @@ class AnimalOutcomeFlow(FlowSpec):
         stdout_log = out_dir / "stdout.log"
         cmd = [
             "python", "-m", "src.training",
+            "--run-id", self.run_id,
             "--years", self.train_years,
             "--out-dir", "/out" if USE_CONTAINERS else str(out_dir),
         ]
@@ -244,12 +245,10 @@ class AnimalOutcomeFlow(FlowSpec):
             runs.finalize(self.run_id, "failed")
             raise RuntimeError(f"train step failed with exit={rc}")
         summary = json.loads((out_dir / "summary.json").read_text())
-        self.model_version = summary["version"]
         self.train_accuracy = summary["train_accuracy"]
         runs.update_step(self.run_id, "train", status="passed",
                          returncode=rc, duration_s=duration,
                          image=IMAGES["train"] if USE_CONTAINERS else "host",
-                         model_version=self.model_version,
                          train_accuracy=self.train_accuracy)
         self.next(self.robustness)
 
@@ -262,6 +261,7 @@ class AnimalOutcomeFlow(FlowSpec):
         stdout_log = out_dir / "stdout.log"
         cmd = [
             "python", "-m", "src.robustness",
+            "--run-id", self.run_id,
             "--holdout-year", str(self.holdout_year),
             "--out-dir", "/out" if USE_CONTAINERS else str(out_dir),
         ]
@@ -290,26 +290,20 @@ class AnimalOutcomeFlow(FlowSpec):
     def end(self):
         from src import runs
         runs.finalize(self.run_id, "passed",
-                      model_version=self.model_version,
                       train_accuracy=self.train_accuracy)
         print(f"=== flow complete ===")
         print(f"  run_id         = {self.run_id}")
-        print(f"  model_version  = {self.model_version}")
         print(f"  train_accuracy = {self.train_accuracy:.4f}")
         if self.auto_commit:
             self._auto_commit()
 
     def _auto_commit(self):
-        """Commit the run dir + (any new) model artifacts.
+        """Commit the run dir (which now contains the model under model/).
 
         Lowercase, short message per the project's commit conventions.
         Uses --no-gpg-sign and the configured ottitsch identity.
         """
-        run_path = Path(self.run_path).relative_to(ROOT)
-        paths = [str(run_path)]
-        model_dir = ROOT / "models" / f"v{self.model_version}"
-        if model_dir.exists():
-            paths.extend([f"models/v{self.model_version}", "models/INDEX.json"])
+        run_path = str(Path(self.run_path).relative_to(ROOT))
         env = {
             **os.environ,
             "GIT_AUTHOR_NAME": "ottitsch",
@@ -318,8 +312,8 @@ class AnimalOutcomeFlow(FlowSpec):
             "GIT_COMMITTER_EMAIL": "ottitsch.work@gmail.com",
         }
         try:
-            subprocess.run(["git", "add", "--", *paths], cwd=ROOT, env=env, check=True)
-            msg = f"run {self.run_id.lower()} v{self.model_version} passed"
+            subprocess.run(["git", "add", "--", run_path], cwd=ROOT, env=env, check=True)
+            msg = f"run {self.run_id.lower()} passed"
             subprocess.run(["git", "commit", "--no-gpg-sign", "-m", msg],
                            cwd=ROOT, env=env, check=True)
             print(f"[auto-commit] committed: {msg}")

@@ -35,6 +35,6 @@ jobs:
 
       - name: save artifacts
         run: |
-          git add runs/ models/
+          git add runs/
           git commit --no-gpg-sign -m "ci: save run artifacts and model"
           git push origin main
