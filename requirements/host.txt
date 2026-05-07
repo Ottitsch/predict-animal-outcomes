@@ -1,1 +1,2 @@
 metaflow==2.19.24
+pyyaml

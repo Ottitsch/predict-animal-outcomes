@@ -45,10 +45,14 @@ import sys
 import time
 from pathlib import Path
 
+import yaml
 from metaflow import FlowSpec, Parameter, step
 
 ROOT = Path(__file__).resolve().parent
 USE_CONTAINERS = os.environ.get("USE_CONTAINERS", "1") != "0"
+
+_cfg_path = ROOT / "config.yml"
+_cfg = yaml.safe_load(_cfg_path.read_text()) if _cfg_path.exists() else {}
 
 
 def _detect_host_project_dir() -> str:
@@ -133,12 +137,12 @@ class AnimalOutcomeFlow(FlowSpec):
     train_years = Parameter(
         "train_years",
         help="Comma-separated list of years to train on.",
-        default="2014,2015,2016,2017,2018,2019,2020,2021,2022",
+        default=_cfg.get("train_years", "2014,2015,2016,2017,2018,2019,2020,2021,2022"),
     )
     holdout_year = Parameter(
         "holdout_year",
         help="Year to use for the robustness evaluation.",
-        default=2024,
+        default=_cfg.get("holdout_year", 2024),
         type=int,
     )
     simulate_interrupt = Parameter(
