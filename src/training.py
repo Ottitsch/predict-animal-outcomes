@@ -21,9 +21,7 @@ Two failure modes are explicitly handled:
 """
 from __future__ import annotations
 
-import os
 import platform
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -41,21 +39,6 @@ class TrainResult:
     run_id: str
     train_accuracy: float
 
-
-def _git_sha() -> str | None:
-    if sha := os.environ.get("GIT_COMMIT_SHA"):
-        return sha
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=Path(__file__).resolve().parent.parent,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return out.stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        return None
 
 
 def _build_pipeline() -> Pipeline:
@@ -99,7 +82,7 @@ def train(train_years: list[int], run_id: str, simulate_interrupt: bool = False)
             "python": platform.python_version(),
             "requirements_file": "docker/requirements/train.txt",
         },
-        "git_sha": _git_sha(),
+        "git_sha": run_id.split("__")[-1],
         "train_years": train_years,
         "train_accuracy": acc,
     }
