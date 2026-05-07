@@ -3,10 +3,11 @@ Serialize the raw CSV dataset into Parquet files.
 
 Two artifacts are produced:
 
-1. ``data/dataset.parquet`` -- the full raw dataset, used by the data quality
-   tests under ``tests/`` (which intentionally run against the *uncleaned* data).
+1. ``data/processed/dataset.parquet`` -- the full raw dataset, used by the data
+   quality tests under ``tests/`` (which intentionally run against the
+   *uncleaned* data).
 
-2. ``data/by_year/<year>.parquet`` -- a cleaned, per-full-year split used for
+2. ``data/processed/by_year/<year>.parquet`` -- a cleaned, per-full-year split used for
    model training and evaluation. Cleaning consists of:
      - Dropping rows where ``Outcome Type`` is null (target is required).
      - Dropping the ``Outcome Subtype`` column (would leak the label).
@@ -25,9 +26,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-RAW_CSV = ROOT / "raw_data" / "Austin_Animal_Center_Outcomes__10_01_2013_to_05_05_2025_.csv"
-RAW_SHA = ROOT / "raw_data" / "SHA256SUMS"
-OUTPUT_DIR = ROOT / "data"
+RAW_CSV = ROOT / "data" / "raw" / "Austin_Animal_Center_Outcomes__10_01_2013_to_05_05_2025_.csv"
+RAW_SHA = ROOT / "data" / "raw" / "SHA256SUMS"
+OUTPUT_DIR = ROOT / "data" / "processed"
 RAW_PARQUET = OUTPUT_DIR / "dataset.parquet"
 BY_YEAR_DIR = OUTPUT_DIR / "by_year"
 
@@ -70,7 +71,7 @@ def _write_parquet(df: pd.DataFrame, path: Path, extra_meta: dict | None = None)
 
 
 def prepare() -> None:
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     BY_YEAR_DIR.mkdir(exist_ok=True)
 
     _verify_raw_sha()

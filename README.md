@@ -41,8 +41,10 @@ docker/                    Dockerfiles + build script for host + step containers
 requirements/              per-step requirements.txt (one file per container image)
 runs/                      per-flow-run audit trail (auto-committed)
 data/
-  dataset.parquet          full raw dataset (used by tests/)
-  by_year/<year>.parquet   cleaned per-year splits (2014-2024) for training/eval
+  raw/                     immutable source CSV + SHA256SUMS
+  processed/
+    dataset.parquet        full raw dataset (used by tests/)
+    by_year/<year>.parquet cleaned per-year splits (2014-2024) for training/eval
 models/                    registered model versions (v1/, v2/, ...)
 ```
 
@@ -89,7 +91,7 @@ The registry exposes:
 plus `latest_version()` for the robustness step.
 
 ### Raw data integrity
-`raw_data/SHA256SUMS` records the digest of the source CSV. `prepare_data.py`
+`data/raw/SHA256SUMS` records the digest of the source CSV. `prepare_data.py`
 checks it on every run and refuses to proceed on a mismatch, so a silent
 dataset swap is loud rather than silently re-poisoning every downstream
 artifact. Regenerate the file only when the source is intentionally updated.
@@ -155,7 +157,7 @@ host machine
             └──► pao-robustness:dev   (sklearn + skops)
 
   artifacts persist on the host repo via bind mount:
-    data/by_year/*.parquet, models/v<N>/*, runs/<run-id>/*
+    data/processed/by_year/*.parquet, models/v<N>/*, runs/<run-id>/*
 ```
 
 ### Build + run
