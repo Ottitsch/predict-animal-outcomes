@@ -193,7 +193,11 @@ class AnimalOutcomeFlow(FlowSpec):
         out_dir = runs.step_dir(self.run_id, "data_tests")
         stdout_log = out_dir / "stdout.log"
         junit = "/out/junit.xml" if USE_CONTAINERS else str(out_dir / "junit.xml")
-        cmd = ["python", "-m", "pytest", "tests/", "-q", f"--junitxml={junit}"]
+        cmd = [
+            "python", "-m", "pytest", "tests/", "-q", f"--junitxml={junit}",
+            f"--train-years={self.train_years}",
+            f"--holdout-year={self.holdout_year}",
+        ]
         t0 = time.monotonic()
         if USE_CONTAINERS:
             rc = _docker_run("data_tests", self.run_id, cmd, stdout_log)
