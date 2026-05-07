@@ -37,7 +37,7 @@ from . import registry as reg
 
 @dataclass
 class TrainResult:
-    version: int
+    run_id: str
     train_accuracy: float
 
 
@@ -65,7 +65,7 @@ def _build_pipeline() -> Pipeline:
     ])
 
 
-def train(train_years: list[int], simulate_interrupt: bool = False) -> TrainResult:
+def train(train_years: list[int], run_id: str, simulate_interrupt: bool = False) -> TrainResult:
     df = data_mod.load_years(train_years)
     X, y = data_mod.split_xy(df)
 
@@ -94,38 +94,41 @@ def train(train_years: list[int], simulate_interrupt: bool = False) -> TrainResu
         },
         "code_dependencies": {
             "python": platform.python_version(),
-            "requirements_file": "requirements/train.txt",
+            "requirements_file": "docker/requirements/train.txt",
         },
         "git_sha": _git_sha(),
         "train_years": train_years,
         "train_accuracy": acc,
     }
-    version = reg.save(pipe, schema)
-    print(f"[train] registered v{version} train_acc={acc:.4f}")
-    return TrainResult(version=version, train_accuracy=acc)
+    reg.save(pipe, schema, run_id)
+    print(f"[train] registered model for run {run_id} train_acc={acc:.4f}")
+    return TrainResult(run_id=run_id, train_accuracy=acc)
 
 
 def _cli() -> int:
-    import argparse, json, shutil, sys
-    p = argparse.ArgumentParser()
+    import argparse, json
+    p = argparse.ArgumentParser(
+        description="Train + register the model. Invoked by flow.py inside the "
+                    "train container; not intended for ad-hoc use.",
+    )
+    p.add_argument("--run-id", required=True,
+                   help="Run id this training belongs to. Required: every model "
+                        "is colocated with its run at runs/<run-id>/model/.")
     p.add_argument("--years", default="2014,2015,2016,2017,2018,2019,2020,2021,2022")
     p.add_argument("--simulate-interrupt", action="store_true")
     p.add_argument("--out-dir", default=None,
-                   help="If set, write a copy of the registered schema and "
-                        "the version pointer here (used by the flow runner).")
+                   help="If set, write a per-step summary.json here (used by "
+                        "the flow runner to read back train_accuracy).")
     args = p.parse_args()
     years = [int(y) for y in args.years.split(",")]
-    res = train(train_years=years, simulate_interrupt=args.simulate_interrupt)
-    summary = {"version": res.version, "train_accuracy": res.train_accuracy}
+    res = train(train_years=years, run_id=args.run_id,
+                simulate_interrupt=args.simulate_interrupt)
+    summary = {"run_id": res.run_id, "train_accuracy": res.train_accuracy}
     print(json.dumps(summary, indent=2))
     if args.out_dir:
         out = Path(args.out_dir)
         out.mkdir(parents=True, exist_ok=True)
-        (out / "model_version.txt").write_text(str(res.version))
         (out / "summary.json").write_text(json.dumps(summary, indent=2))
-        src_schema = Path("models") / f"v{res.version}" / "schema.json"
-        if src_schema.exists():
-            shutil.copy(src_schema, out / "schema.json")
     return 0
 
 

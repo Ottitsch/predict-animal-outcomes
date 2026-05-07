@@ -12,7 +12,7 @@ from typing import Iterable
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-BY_YEAR_DIR = ROOT / "data" / "by_year"
+BY_YEAR_DIR = ROOT / "data" / "processed" / "by_year"
 
 # Feature schema. Kept tiny and intentionally simple ("very simple model").
 # Categorical columns are one-hot encoded inside the training pipeline; the

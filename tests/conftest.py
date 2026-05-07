@@ -6,7 +6,7 @@ import great_expectations as gx
 import pytest
 from pathlib import Path
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "dataset.parquet"
+DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "dataset.parquet"
 
 
 def pytest_addoption(parser):

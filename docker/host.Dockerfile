@@ -9,7 +9,7 @@ RUN chmod +x /usr/bin/docker
 
 WORKDIR /work
 
-COPY requirements/host.txt /tmp/host.txt
+COPY docker/requirements/host.txt /tmp/host.txt
 RUN pip install --no-cache-dir \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \

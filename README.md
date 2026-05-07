@@ -38,12 +38,17 @@ src/
 tests/                     data quality tests (pytest + great_expectations)
   runs.py                  per-run dirs + flow.json envelope
 docker/                    Dockerfiles + build script for host + step containers
-requirements/              per-step requirements.txt (one file per container image)
+  requirements/            per-step requirements.txt (one file per container image)
 runs/                      per-flow-run audit trail (auto-committed)
+  <run-id>/
+    data_tests/, train/, robustness/   per-step stdout + reports
+    model/                 registered model artifact for this run (skops + schema)
+    flow.json              run envelope
 data/
-  dataset.parquet          full raw dataset (used by tests/)
-  by_year/<year>.parquet   cleaned per-year splits (2014-2024) for training/eval
-models/                    registered model versions (v1/, v2/, ...)
+  raw/                     immutable source CSV + SHA256SUMS
+  processed/
+    dataset.parquet        full raw dataset (used by tests/)
+    by_year/<year>.parquet cleaned per-year splits (2014-2024) for training/eval
 ```
 
 ## Design notes
@@ -68,28 +73,30 @@ The trained `Pipeline(preprocessor + classifier)` is serialized with **skops**,
 which is purpose-built for sklearn objects and avoids pickle's
 arbitrary-code-execution risk on load.
 
-### Versioning (custom file-based registry)
+### Versioning (run-scoped file-based registry)
 `src/registry.py` is a small, file-based model registry used in place of
-MLflow. Each registered model lives at `models/v<N>/`:
+MLflow. Each successful flow run produces exactly one model, persisted next
+to that run's audit trail at `runs/<run-id>/model/`:
 
 - `model.skops` -- the serialized sklearn pipeline.
 - `schema.json` -- input/output contract (column lists, target column,
   classes), code dependencies (Python version, requirements file), the
   recorded train accuracy, the `git_sha` of the commit it was trained from,
-  and a `created_at` timestamp.
-- `run.json` -- robustness report attached after evaluation
-  (holdout accuracy, baseline accuracy, pass/fail flags).
+  the originating `run_id`, and a `created_at` timestamp.
 
-A flat `models/INDEX.json` is regenerated on every write so the full set of
-registered versions and their key metadata is reviewable from a single
-diff-friendly file.
+Models are identified by their producing `run_id` (timestamped + git-sha
+suffixed), not by a separate version namespace. The robustness report for a
+run lives at `runs/<run-id>/robustness/report.json` and is *not* duplicated
+into the model dir -- everything for a single training run lives under one
+parent.
 
 The registry exposes:
-`list_models()`, `load(version)`, `schema(version)`, `attach_run(version, run)`,
-plus `latest_version()` for the robustness step.
+`load(run_id)`, `schema(run_id)`, `list_runs_with_model()`,
+`latest_run_id()` (used by ad-hoc consumers; the flow always evaluates the
+model from its own current run).
 
 ### Raw data integrity
-`raw_data/SHA256SUMS` records the digest of the source CSV. `prepare_data.py`
+`data/raw/SHA256SUMS` records the digest of the source CSV. `prepare_data.py`
 checks it on every run and refuses to proceed on a mismatch, so a silent
 dataset swap is loud rather than silently re-poisoning every downstream
 artifact. Regenerate the file only when the source is intentionally updated.
@@ -128,12 +135,12 @@ Two failure modes are explicitly handled:
 
 ## Per-step dependencies
 
-Each flow step has its own pinned requirements file under `requirements/` so
-the steps execute in isolated containers:
-- `requirements/host.txt` (just metaflow, for the driver container)
-- `requirements/data_tests.txt`
-- `requirements/train.txt`
-- `requirements/robustness.txt`
+Each flow step has its own pinned requirements file under `docker/requirements/`
+so the steps execute in isolated containers:
+- `docker/requirements/host.txt` (just metaflow, for the driver container)
+- `docker/requirements/data_tests.txt`
+- `docker/requirements/train.txt`
+- `docker/requirements/robustness.txt`
 
 The top-level `requirements.txt` is the union, used only when running the flow
 host-natively (`USE_CONTAINERS=0 python flow.py run`).
@@ -141,7 +148,7 @@ host-natively (`USE_CONTAINERS=0 python flow.py run`).
 ## Containerized execution
 
 The flow runs as a single host container that spawns a sibling container per
-step. Each step image installs only its own `requirements/<step>.txt`.
+step. Each step image installs only its own `docker/requirements/<step>.txt`.
 
 ```
 host machine
@@ -155,7 +162,7 @@ host machine
             └──► pao-robustness:dev   (sklearn + skops)
 
   artifacts persist on the host repo via bind mount:
-    data/by_year/*.parquet, models/v<N>/*, runs/<run-id>/*
+    data/processed/by_year/*.parquet, runs/<run-id>/* (incl. model/)
 ```
 
 ### Build + run
@@ -194,18 +201,20 @@ runs/<ISO-timestamp>__<short-sha>/
     returncode.txt
   train/
     stdout.log
-    summary.json              {"version": N, "train_accuracy": ...}
-    schema.json               copy of the registered model schema
-    model_version.txt         pointer into models/v<N>/
+    summary.json              {"run_id": "...", "train_accuracy": ...}
+  model/
+    model.skops               serialized sklearn pipeline
+    schema.json               input/output contract + run_id + git_sha
   robustness/
     stdout.log
     report.json               full RobustnessReport
 ```
 
 `flow.json` is written incrementally after each step, so a crashed run still
-leaves a partial record on disk. On a successful run, `runs/<id>/` and any
-new `models/v<N>/` are auto-committed (lowercase, short message, no GPG
-signature) — disable with `--auto_commit False`.
+leaves a partial record on disk. The model artifact is colocated with its run
+so provenance is one `cd` away in either direction. On a successful run,
+`runs/<id>/` is auto-committed (lowercase, short message, no GPG signature)
+— disable with `--auto_commit False`.
 
 ### Host-native fallback
 
