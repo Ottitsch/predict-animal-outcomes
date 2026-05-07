@@ -1,0 +1,13 @@
+{
+  "model_version": 2,
+  "holdout_year": 2024,
+  "n_holdout_rows": 11812,
+  "majority_baseline_accuracy": 0.629105993904504,
+  "holdout_accuracy": 0.8081611920081273,
+  "train_accuracy": 0.6910789793624457,
+  "margin_over_baseline": 0.17905519810362336,
+  "train_holdout_gap": -0.11708221264568164,
+  "passed_majority": true,
+  "passed_gap": true,
+  "passed": true
+}
