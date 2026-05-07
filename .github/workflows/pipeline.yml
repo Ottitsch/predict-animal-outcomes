@@ -31,7 +31,7 @@ jobs:
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
-            pao-host:dev run --auto-commit False
+            pao-host:dev run --auto_commit False
 
       - name: save artifacts
         run: |
