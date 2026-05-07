@@ -4,9 +4,14 @@ Shared pytest fixtures for data quality tests.
 import pandas as pd
 import great_expectations as gx
 import pytest
+import yaml
 from pathlib import Path
 
-DATA_PATH = Path(__file__).resolve().parent.parent / "data" / "processed" / "dataset.parquet"
+ROOT = Path(__file__).resolve().parent.parent
+BY_YEAR_DIR = ROOT / "data" / "processed" / "by_year"
+
+_cfg_path = ROOT / "config.yml"
+_cfg = yaml.safe_load(_cfg_path.read_text()) if _cfg_path.exists() else {}
 
 
 def pytest_addoption(parser):
@@ -16,6 +21,16 @@ def pytest_addoption(parser):
         default=False,
         help="On test failure, print the rows that violate the expectation.",
     )
+    parser.addoption(
+        "--train-years",
+        default=str(_cfg.get("train_years", "2014,2015,2016,2017,2018,2019,2020,2021")),
+        help="Comma-separated train years (matches flow.py --train_years).",
+    )
+    parser.addoption(
+        "--holdout-year",
+        default=str(_cfg.get("holdout_year", 2024)),
+        help="Holdout year (matches flow.py --holdout_year).",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -24,9 +39,16 @@ def inspect_mode(request):
 
 
 @pytest.fixture(scope="session")
-def df():
-    """Load the parquet dataset as a plain pandas DataFrame."""
-    return pd.read_parquet(DATA_PATH)
+def df(request):
+    """Load and concatenate the by_year parquets for the run's train + holdout years."""
+    train_years = [
+        int(y.strip())
+        for y in request.config.getoption("--train-years").split(",")
+    ]
+    holdout_year = int(request.config.getoption("--holdout-year"))
+    years = sorted(set(train_years + [holdout_year]))
+    frames = [pd.read_parquet(BY_YEAR_DIR / f"{y}.parquet") for y in years]
+    return pd.concat(frames, ignore_index=True)
 
 
 @pytest.fixture(scope="session")
