@@ -36,7 +36,10 @@ src/
   registry.py              tiny file-based model registry (list/load/schema)
   robustness.py            holdout-year + majority-baseline validation
 tests/                     data quality tests (pytest + great_expectations)
-requirements/              per-step requirements.txt for isolated execution
+  runs.py                  per-run dirs + flow.json envelope
+docker/                    Dockerfiles + build script for host + step containers
+requirements/              per-step requirements.txt (one file per container image)
+runs/                      per-flow-run audit trail (auto-committed)
 data/
   dataset.parquet          full raw dataset (used by tests/)
   by_year/<year>.parquet   cleaned per-year splits (2014-2024) for training/eval
@@ -126,10 +129,88 @@ Two failure modes are explicitly handled:
 ## Per-step dependencies
 
 Each flow step has its own pinned requirements file under `requirements/` so
-the steps can be executed in isolation (e.g. inside containers):
+the steps execute in isolated containers:
+- `requirements/host.txt` (just metaflow, for the driver container)
 - `requirements/data_tests.txt`
 - `requirements/train.txt`
 - `requirements/robustness.txt`
 
-The top-level `requirements.txt` is the union, used by the local
-`python flow.py run` invocation.
+The top-level `requirements.txt` is the union, used only when running the flow
+host-natively (`USE_CONTAINERS=0 python flow.py run`).
+
+## Containerized execution
+
+The flow runs as a single host container that spawns a sibling container per
+step. Each step image installs only its own `requirements/<step>.txt`.
+
+```
+host machine
+  /var/run/docker.sock ──┐
+  $PWD (the repo)  ──┐   │
+                     │   │
+       pao-host:dev (driver, runs flow.py)
+            │   spawns via docker.sock
+            ├──► pao-data-tests:dev   (pytest + great_expectations)
+            ├──► pao-train:dev        (sklearn + skops)
+            └──► pao-robustness:dev   (sklearn + skops)
+
+  artifacts persist on the host repo via bind mount:
+    data/by_year/*.parquet, models/v<N>/*, runs/<run-id>/*
+```
+
+### Build + run
+
+```bash
+docker/build.sh                                   # ~3 min first time
+
+docker run --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$PWD":/work -w /work \
+    -e HOST_PROJECT_DIR="$PWD" \
+    pao-host:dev run
+```
+
+`HOST_PROJECT_DIR` is the absolute path to the repo *on the host machine*,
+needed because the bind-mount paths are interpreted by the host's Docker
+daemon (not by anything inside the host container).
+
+### How the host knows when a step finishes
+
+`docker run` (foreground) is blocking. The host spawns each step with
+`subprocess.Popen` and reads its stdout until the docker CLI exits. Exit code
+0 = step passed; non-zero = step failed and the flow stops. No polling, no
+healthchecks.
+
+### Per-run audit trail (`runs/`)
+
+Each invocation creates a timestamped, git-sha-tagged directory:
+
+```
+runs/<ISO-timestamp>__<short-sha>/
+  flow.json                   run-level envelope (parameters, status, timings)
+  data_tests/
+    stdout.log
+    junit.xml
+    returncode.txt
+  train/
+    stdout.log
+    summary.json              {"version": N, "train_accuracy": ...}
+    schema.json               copy of the registered model schema
+    model_version.txt         pointer into models/v<N>/
+  robustness/
+    stdout.log
+    report.json               full RobustnessReport
+```
+
+`flow.json` is written incrementally after each step, so a crashed run still
+leaves a partial record on disk. On a successful run, `runs/<id>/` and any
+new `models/v<N>/` are auto-committed (lowercase, short message, no GPG
+signature) — disable with `--auto_commit False`.
+
+### Host-native fallback
+
+```bash
+USE_CONTAINERS=0 python flow.py run
+```
+Skips Docker entirely; each step runs as a plain `subprocess.Popen` on the
+host, still capturing stdout into `runs/<run-id>/<step>/stdout.log`.

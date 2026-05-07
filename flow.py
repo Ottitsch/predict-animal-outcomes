@@ -1,27 +1,101 @@
 """
 Metaflow flow: data tests -> training -> robustness validation.
 
+Architecture
+------------
+The flow is the *driver*. Each step shells out to a step-specific Docker image
+that contains only that step's dependencies (see ``docker/*.Dockerfile`` and
+``requirements/*.txt``). Inputs and outputs are passed via two bind mounts:
+
+* ``$HOST_PROJECT_DIR``  -> ``/work``        (the repo; data + models registry)
+* ``$HOST_PROJECT_DIR/runs/<run-id>/<step>`` -> ``/out`` (this step's outputs)
+
+When the host itself runs inside a container (the ``pao-host`` image),
+``HOST_PROJECT_DIR`` must be set to the *host machine's* path to the repo,
+because the bind-mount paths we pass to ``docker run`` are interpreted by the
+host daemon, not by anything inside our container.
+
+How the host knows when a step finishes
+---------------------------------------
+``docker run`` (foreground) is blocking. ``subprocess.run([..., "docker", "run"
+, ...], check=True)`` returns when the step container's PID 1 exits and
+propagates the exit code. Non-zero exit -> CalledProcessError -> Metaflow stops
+the flow. No polling, no healthchecks, no signals.
+
 Run locally:
-    python flow.py run
+    docker/build.sh
+    docker run --rm \\
+        -v /var/run/docker.sock:/var/run/docker.sock \\
+        -v "$PWD":/work -w /work \\
+        -e HOST_PROJECT_DIR="$PWD" \\
+        pao-host:dev
 
 Inject a training error to demonstrate the failure path:
-    python flow.py run --simulate_interrupt True
+    pao-host:dev run --simulate_interrupt True
 
-The three steps each have their own dependency manifest under ``requirements/``
-so they can be run in isolation (e.g. inside containers). For the local
-``python flow.py run`` invocation the union of those is provided as the top
-level ``requirements.txt``.
+Run without containers (legacy, host-native):
+    USE_CONTAINERS=0 python flow.py run
 """
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from metaflow import FlowSpec, Parameter, step
 
 ROOT = Path(__file__).resolve().parent
+HOST_PROJECT_DIR = os.environ.get("HOST_PROJECT_DIR", str(ROOT))
+USE_CONTAINERS = os.environ.get("USE_CONTAINERS", "1") != "0"
+IMAGE_TAG = os.environ.get("PAO_IMAGE_TAG", "dev")
+
+IMAGES = {
+    "data_tests": f"pao-data-tests:{IMAGE_TAG}",
+    "train":      f"pao-train:{IMAGE_TAG}",
+    "robustness": f"pao-robustness:{IMAGE_TAG}",
+}
+
+
+def _docker_run(step_name: str, run_id: str, cmd: list[str], stdout_log: Path) -> int:
+    """Spawn a sibling container for one step and stream its output to a log file.
+
+    Blocks until the container exits. Returns the container's exit code.
+    """
+    image = IMAGES[step_name]
+    out_host = f"{HOST_PROJECT_DIR}/runs/{run_id}/{step_name}"
+    docker_cmd = [
+        "docker", "run", "--rm",
+        "-v", f"{HOST_PROJECT_DIR}:/work",
+        "-v", f"{out_host}:/out",
+        "-w", "/work",
+        image,
+        *cmd,
+    ]
+    print(f"[{step_name}] $ {' '.join(docker_cmd)}", flush=True)
+    with stdout_log.open("w") as f:
+        proc = subprocess.Popen(docker_cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True)
+        for line in proc.stdout:  # type: ignore[union-attr]
+            sys.stdout.write(line)
+            f.write(line)
+        proc.wait()
+    return proc.returncode
+
+
+def _host_run(cmd: list[str], stdout_log: Path) -> int:
+    """Same contract as _docker_run but runs the command on the host directly."""
+    print(f"[host] $ {' '.join(cmd)}", flush=True)
+    with stdout_log.open("w") as f:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, text=True, cwd=ROOT)
+        for line in proc.stdout:  # type: ignore[union-attr]
+            sys.stdout.write(line)
+            f.write(line)
+        proc.wait()
+    return proc.returncode
 
 
 class AnimalOutcomeFlow(FlowSpec):
@@ -42,10 +116,28 @@ class AnimalOutcomeFlow(FlowSpec):
         default=False,
         type=bool,
     )
+    auto_commit = Parameter(
+        "auto_commit",
+        help="If True, git-commit the run dir + new model after a successful flow.",
+        default=True,
+        type=bool,
+    )
 
     @step
     def start(self):
-        print("=== Animal Outcome Flow ===")
+        from src import runs
+
+        self.run_id = runs.new_run_id()
+        self.run_path = str(runs.run_dir(self.run_id))
+        runs.init_envelope(self.run_id, parameters={
+            "train_years": self.train_years,
+            "holdout_year": self.holdout_year,
+            "simulate_interrupt": self.simulate_interrupt,
+            "use_containers": USE_CONTAINERS,
+        })
+        print(f"=== Animal Outcome Flow ===")
+        print(f"  run_id             = {self.run_id}")
+        print(f"  use_containers     = {USE_CONTAINERS}")
         print(f"  train_years        = {self.train_years}")
         print(f"  holdout_year       = {self.holdout_year}")
         print(f"  simulate_interrupt = {self.simulate_interrupt}")
@@ -53,72 +145,151 @@ class AnimalOutcomeFlow(FlowSpec):
 
     @step
     def data_tests(self):
-        """Run the data quality tests with pytest.
+        """Run the data quality tests with pytest in an isolated container.
 
-        The test suite intentionally includes one expected failure
-        (``test_outcome_type_not_null``) on the raw dataset; we record the
-        outcome but do not block the flow on it. A hard failure of any other
-        test would indicate genuine data corruption and should stop the
-        pipeline before training.
+        We do not gate the flow on this step's exit code: the test suite
+        intentionally includes one expected failure on the raw dataset (a known
+        data-quality issue we want surfaced but not blocking). A real
+        containerized test runner could be made strict by raising on non-zero
+        returncode here.
         """
-        result = subprocess.run(
-            [sys.executable, "-m", "pytest", "tests/", "-q"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-        )
-        self.tests_stdout = result.stdout
-        self.tests_returncode = result.returncode
-        print(result.stdout)
-        if result.returncode != 0:
-            print("[data_tests] pytest reported failures (see above).")
+        from src import runs
+
+        out_dir = runs.step_dir(self.run_id, "data_tests")
+        stdout_log = out_dir / "stdout.log"
+        junit = "/out/junit.xml" if USE_CONTAINERS else str(out_dir / "junit.xml")
+        cmd = ["python", "-m", "pytest", "tests/", "-q", f"--junitxml={junit}"]
+        t0 = time.monotonic()
+        if USE_CONTAINERS:
+            rc = _docker_run("data_tests", self.run_id, cmd, stdout_log)
+        else:
+            rc = _host_run(cmd, stdout_log)
+        duration = round(time.monotonic() - t0, 3)
+        (out_dir / "returncode.txt").write_text(str(rc))
+        runs.update_step(self.run_id, "data_tests",
+                         status="passed" if rc == 0 else "failed_nonblocking",
+                         returncode=rc, duration_s=duration,
+                         image=IMAGES["data_tests"] if USE_CONTAINERS else "host")
+        self.tests_returncode = rc
+        if rc != 0:
+            print(f"[data_tests] pytest exit={rc} (non-blocking; see {stdout_log})")
         self.next(self.train)
 
     @step
     def train(self):
-        """Train + register the model. See ``src/training.py`` for error handling.
+        """Train + register the model in an isolated container.
 
-        Two failure modes are explicitly handled at this step:
+        Two failure modes are explicitly handled in ``src/training.py`` and
+        propagate through the container exit code:
 
-        * **Too-small training set** (``< 1000`` rows) raises ``ValueError``
-          before any artifact is written. We refuse to produce an under-trained
-          model that could be promoted by accident.
-        * **Simulated mid-training error** (``simulate_interrupt=True``) raises
-          ``RuntimeError`` after data load but before fitting. The flow step
-          propagates the error and the model is never registered. Recovery is
-          a plain re-run.
+        * **Too-small training set** (``< 1000`` rows) -> exit 1
+        * **Simulated mid-training error** (``simulate_interrupt=True``) -> exit 1
         """
-        from src.training import train
+        from src import runs
 
-        years = [int(y) for y in self.train_years.split(",")]
-        result = train(train_years=years, simulate_interrupt=self.simulate_interrupt)
-        self.model_version = result.version
-        self.train_accuracy = result.train_accuracy
+        out_dir = runs.step_dir(self.run_id, "train")
+        stdout_log = out_dir / "stdout.log"
+        cmd = [
+            "python", "-m", "src.training",
+            "--years", self.train_years,
+            "--out-dir", "/out" if USE_CONTAINERS else str(out_dir),
+        ]
+        if self.simulate_interrupt:
+            cmd.append("--simulate-interrupt")
+        t0 = time.monotonic()
+        if USE_CONTAINERS:
+            rc = _docker_run("train", self.run_id, cmd, stdout_log)
+        else:
+            rc = _host_run(cmd, stdout_log)
+        duration = round(time.monotonic() - t0, 3)
+        if rc != 0:
+            runs.update_step(self.run_id, "train", status="failed",
+                             returncode=rc, duration_s=duration,
+                             image=IMAGES["train"] if USE_CONTAINERS else "host")
+            runs.finalize(self.run_id, "failed")
+            raise RuntimeError(f"train step failed with exit={rc}")
+        summary = json.loads((out_dir / "summary.json").read_text())
+        self.model_version = summary["version"]
+        self.train_accuracy = summary["train_accuracy"]
+        runs.update_step(self.run_id, "train", status="passed",
+                         returncode=rc, duration_s=duration,
+                         image=IMAGES["train"] if USE_CONTAINERS else "host",
+                         model_version=self.model_version,
+                         train_accuracy=self.train_accuracy)
         self.next(self.robustness)
 
     @step
     def robustness(self):
         """Validate the freshly trained model against the documented thresholds."""
-        from dataclasses import asdict
-        from src.robustness import evaluate
+        from src import runs
 
-        report = evaluate(self.holdout_year)
-        self.robustness_report = asdict(report)
-        print(json.dumps(self.robustness_report, indent=2))
-        if not report.passed:
-            raise RuntimeError(
-                f"robustness check FAILED: "
-                f"passed_majority={report.passed_majority}, "
-                f"passed_gap={report.passed_gap}"
-            )
-        print("[robustness] PASSED")
+        out_dir = runs.step_dir(self.run_id, "robustness")
+        stdout_log = out_dir / "stdout.log"
+        cmd = [
+            "python", "-m", "src.robustness",
+            "--holdout-year", str(self.holdout_year),
+            "--out-dir", "/out" if USE_CONTAINERS else str(out_dir),
+        ]
+        t0 = time.monotonic()
+        if USE_CONTAINERS:
+            rc = _docker_run("robustness", self.run_id, cmd, stdout_log)
+        else:
+            rc = _host_run(cmd, stdout_log)
+        duration = round(time.monotonic() - t0, 3)
+        report_path = out_dir / "report.json"
+        report = json.loads(report_path.read_text()) if report_path.exists() else {}
+        self.robustness_report = report
+        status = "passed" if rc == 0 else "failed"
+        runs.update_step(self.run_id, "robustness", status=status,
+                         returncode=rc, duration_s=duration,
+                         image=IMAGES["robustness"] if USE_CONTAINERS else "host",
+                         report=report)
+        if rc != 0:
+            runs.finalize(self.run_id, "failed")
+            raise RuntimeError(f"robustness step failed with exit={rc}")
+        print(f"[robustness] PASSED  margin={report.get('margin_over_baseline'):.4f}"
+              f"  gap={report.get('train_holdout_gap'):.4f}")
         self.next(self.end)
 
     @step
     def end(self):
-        print("=== flow complete ===")
+        from src import runs
+        runs.finalize(self.run_id, "passed",
+                      model_version=self.model_version,
+                      train_accuracy=self.train_accuracy)
+        print(f"=== flow complete ===")
+        print(f"  run_id         = {self.run_id}")
         print(f"  model_version  = {self.model_version}")
         print(f"  train_accuracy = {self.train_accuracy:.4f}")
+        if self.auto_commit:
+            self._auto_commit()
+
+    def _auto_commit(self):
+        """Commit the run dir + (any new) model artifacts.
+
+        Lowercase, short message per the project's commit conventions.
+        Uses --no-gpg-sign and the configured ottitsch identity.
+        """
+        run_path = Path(self.run_path).relative_to(ROOT)
+        paths = [str(run_path)]
+        model_dir = ROOT / "models" / f"v{self.model_version}"
+        if model_dir.exists():
+            paths.extend([f"models/v{self.model_version}", "models/INDEX.json"])
+        env = {
+            **os.environ,
+            "GIT_AUTHOR_NAME": "ottitsch",
+            "GIT_AUTHOR_EMAIL": "ottitsch.work@gmail.com",
+            "GIT_COMMITTER_NAME": "ottitsch",
+            "GIT_COMMITTER_EMAIL": "ottitsch.work@gmail.com",
+        }
+        try:
+            subprocess.run(["git", "add", "--", *paths], cwd=ROOT, env=env, check=True)
+            msg = f"run {self.run_id.lower()} v{self.model_version} passed"
+            subprocess.run(["git", "commit", "--no-gpg-sign", "-m", msg],
+                           cwd=ROOT, env=env, check=True)
+            print(f"[auto-commit] committed: {msg}")
+        except subprocess.CalledProcessError as e:
+            print(f"[auto-commit] skipped: {e}")
 
 
 if __name__ == "__main__":

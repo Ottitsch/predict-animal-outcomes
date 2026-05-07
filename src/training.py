@@ -106,14 +106,26 @@ def train(train_years: list[int], simulate_interrupt: bool = False) -> TrainResu
 
 
 def _cli() -> int:
-    import argparse, json, sys
+    import argparse, json, shutil, sys
     p = argparse.ArgumentParser()
     p.add_argument("--years", default="2014,2015,2016,2017,2018,2019,2020,2021,2022")
     p.add_argument("--simulate-interrupt", action="store_true")
+    p.add_argument("--out-dir", default=None,
+                   help="If set, write a copy of the registered schema and "
+                        "the version pointer here (used by the flow runner).")
     args = p.parse_args()
     years = [int(y) for y in args.years.split(",")]
     res = train(train_years=years, simulate_interrupt=args.simulate_interrupt)
-    print(json.dumps(res.__dict__, indent=2))
+    summary = {"version": res.version, "train_accuracy": res.train_accuracy}
+    print(json.dumps(summary, indent=2))
+    if args.out_dir:
+        out = Path(args.out_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "model_version.txt").write_text(str(res.version))
+        (out / "summary.json").write_text(json.dumps(summary, indent=2))
+        src_schema = Path("models") / f"v{res.version}" / "schema.json"
+        if src_schema.exists():
+            shutil.copy(src_schema, out / "schema.json")
     return 0
 
 

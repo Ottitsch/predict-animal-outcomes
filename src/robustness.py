@@ -96,11 +96,19 @@ def evaluate(holdout_year: int) -> RobustnessReport:
 
 def _cli() -> int:
     import argparse, json
+    from pathlib import Path
     p = argparse.ArgumentParser()
     p.add_argument("--holdout-year", type=int, default=2024)
+    p.add_argument("--out-dir", default=None,
+                   help="If set, write the robustness report JSON here.")
     args = p.parse_args()
     report = evaluate(args.holdout_year)
-    print(json.dumps(asdict(report), indent=2))
+    payload = asdict(report)
+    print(json.dumps(payload, indent=2))
+    if args.out_dir:
+        out = Path(args.out_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        (out / "report.json").write_text(json.dumps(payload, indent=2))
     return 0 if report.passed else 1
 
 
