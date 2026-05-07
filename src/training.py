@@ -21,6 +21,7 @@ Two failure modes are explicitly handled:
 """
 from __future__ import annotations
 
+import os
 import platform
 import subprocess
 from dataclasses import dataclass
@@ -42,6 +43,8 @@ class TrainResult:
 
 
 def _git_sha() -> str | None:
+    if sha := os.environ.get("GIT_COMMIT_SHA"):
+        return sha
     try:
         out = subprocess.run(
             ["git", "rev-parse", "HEAD"],
