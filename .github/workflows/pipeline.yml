@@ -23,5 +23,4 @@ jobs:
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
-            -e HOST_PROJECT_DIR="${{ github.workspace }}" \
             pao-host:dev run

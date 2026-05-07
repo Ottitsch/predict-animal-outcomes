@@ -11,9 +11,10 @@ that contains only that step's dependencies (see ``docker/*.Dockerfile`` and
 * ``$HOST_PROJECT_DIR/runs/<run-id>/<step>`` -> ``/out`` (this step's outputs)
 
 When the host itself runs inside a container (the ``pao-host`` image),
-``HOST_PROJECT_DIR`` must be set to the *host machine's* path to the repo,
-because the bind-mount paths we pass to ``docker run`` are interpreted by the
-host daemon, not by anything inside our container.
+the bind-mount paths we pass to ``docker run`` are interpreted by the host
+daemon, not by anything inside our container. ``_detect_host_project_dir``
+resolves this automatically by inspecting the running container's mounts via
+the Docker socket, so no ``HOST_PROJECT_DIR`` env var is needed.
 
 How the host knows when a step finishes
 ---------------------------------------
@@ -27,7 +28,6 @@ Run locally:
     docker run --rm \\
         -v /var/run/docker.sock:/var/run/docker.sock \\
         -v "$PWD":/work -w /work \\
-        -e HOST_PROJECT_DIR="$PWD" \\
         pao-host:dev
 
 Inject a training error to demonstrate the failure path:
@@ -48,8 +48,39 @@ from pathlib import Path
 from metaflow import FlowSpec, Parameter, step
 
 ROOT = Path(__file__).resolve().parent
-HOST_PROJECT_DIR = os.environ.get("HOST_PROJECT_DIR", str(ROOT))
 USE_CONTAINERS = os.environ.get("USE_CONTAINERS", "1") != "0"
+
+
+def _detect_host_project_dir() -> str:
+    """Return the host-side path that is bind-mounted to /work.
+
+    When pao-host runs inside Docker, bind-mount paths passed to sibling
+    ``docker run`` calls are resolved by the host daemon — so we need the
+    *host* path, not /work. We get it by asking the daemon to inspect this
+    container (identified by its hostname, which Docker sets to the short
+    container ID) and reading the Source of the /work mount.
+
+    Falls back to ROOT when running outside a container or if the socket is
+    unavailable (e.g. USE_CONTAINERS=0 host-native mode).
+    """
+    if not USE_CONTAINERS:
+        return str(ROOT)
+    try:
+        import socket
+        cid = socket.gethostname()
+        result = subprocess.run(
+            ["docker", "inspect", "--format", "{{json .Mounts}}", cid],
+            capture_output=True, text=True, check=True,
+        )
+        for mount in json.loads(result.stdout):
+            if mount.get("Destination") == "/work":
+                return mount["Source"]
+    except Exception:
+        pass
+    return str(ROOT)
+
+
+HOST_PROJECT_DIR = _detect_host_project_dir()
 IMAGE_TAG = os.environ.get("PAO_IMAGE_TAG", "dev")
 
 IMAGES = {

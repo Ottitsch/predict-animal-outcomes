@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir \
     -r /tmp/host.txt
 
 ENV PYTHONUNBUFFERED=1
+ENV METAFLOW_USER=pipeline
 
 ENTRYPOINT ["python", "flow.py"]
 CMD ["run"]
