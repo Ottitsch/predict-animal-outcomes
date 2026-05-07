@@ -8,9 +8,17 @@ on:
 jobs:
   pipeline:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: configure git
+        run: |
+          git config user.name "ottitsch"
+          git config user.email "ottitsch.work@gmail.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
       - name: copy docker cli for host image
         run: cp "$(which docker)" docker-cli-bin
@@ -24,3 +32,6 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
             pao-host:dev run
+
+      - name: push run artifacts
+        run: git push origin main
