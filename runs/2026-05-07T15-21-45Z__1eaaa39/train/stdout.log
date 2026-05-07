@@ -1,0 +1,5 @@
+[train] registered v4 train_acc=0.6979
+{
+  "version": 4,
+  "train_accuracy": 0.6979238220739349
+}

@@ -1,0 +1,54 @@
+{
+  "input": {
+    "categorical_features": [
+      "Animal Type",
+      "Sex upon Outcome",
+      "Breed",
+      "Color"
+    ],
+    "numeric_features": [
+      "age_days"
+    ],
+    "feature_columns": [
+      "Animal Type",
+      "Sex upon Outcome",
+      "Breed",
+      "Color",
+      "age_days"
+    ]
+  },
+  "output": {
+    "target_column": "Outcome Type",
+    "classes": [
+      "Adoption",
+      "Died",
+      "Disposal",
+      "Euthanasia",
+      "Missing",
+      "Relocate",
+      "Return to Owner",
+      "Rto-Adopt",
+      "Stolen",
+      "Transfer"
+    ],
+    "type": "categorical"
+  },
+  "code_dependencies": {
+    "python": "3.13.13",
+    "requirements_file": "requirements/train.txt"
+  },
+  "git_sha": null,
+  "train_years": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022
+  ],
+  "train_accuracy": 0.6979238220739349,
+  "created_at": "2026-05-07T15:22:56.864738+00:00"
+}

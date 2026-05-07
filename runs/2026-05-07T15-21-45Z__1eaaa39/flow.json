@@ -1,0 +1,50 @@
+{
+  "run_id": "2026-05-07T15-21-45Z__1eaaa39",
+  "git_sha": "1eaaa39",
+  "started_at": "2026-05-07T15:21:45.784319+00:00",
+  "ended_at": "2026-05-07T15:23:01.511152+00:00",
+  "status": "passed",
+  "parameters": {
+    "train_years": "2014,2015,2016,2017,2018,2019,2020,2021,2022",
+    "holdout_year": 2024,
+    "simulate_interrupt": false,
+    "use_containers": true
+  },
+  "steps": {
+    "data_tests": {
+      "status": "failed_nonblocking",
+      "returncode": 1,
+      "duration_s": 13.44,
+      "image": "pao-data-tests:dev"
+    },
+    "train": {
+      "status": "passed",
+      "returncode": 0,
+      "duration_s": 57.393,
+      "image": "pao-train:dev",
+      "model_version": 4,
+      "train_accuracy": 0.6979238220739349
+    },
+    "robustness": {
+      "status": "passed",
+      "returncode": 0,
+      "duration_s": 3.339,
+      "image": "pao-robustness:dev",
+      "report": {
+        "model_version": 4,
+        "holdout_year": 2024,
+        "n_holdout_rows": 11812,
+        "majority_baseline_accuracy": 0.629105993904504,
+        "holdout_accuracy": 0.8088384693532001,
+        "train_accuracy": 0.6979238220739349,
+        "margin_over_baseline": 0.1797324754486962,
+        "train_holdout_gap": -0.11091464727926525,
+        "passed_majority": true,
+        "passed_gap": true,
+        "passed": true
+      }
+    }
+  },
+  "model_version": 4,
+  "train_accuracy": 0.6979238220739349
+}
