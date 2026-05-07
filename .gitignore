@@ -4,3 +4,4 @@ __pycache__/
 .pytest_cache/
 gx/
 .metaflow/
+docker-cli-bin
