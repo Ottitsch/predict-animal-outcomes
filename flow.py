@@ -194,7 +194,7 @@ class AnimalOutcomeFlow(FlowSpec):
         stdout_log = out_dir / "stdout.log"
         report = "/out/report.json" if USE_CONTAINERS else str(out_dir / "report.json")
         cmd = [
-            "python", "-m", "pytest", "tests/", "-q", f"--json-report", f"--json-report-file={report}",
+            "python", "-m", "pytest", "tests/", "-q", f"--json-report", f"--json-report-file={report}", "--json-report-indent=2",
             f"--train-years={self.train_years}",
             f"--holdout-year={self.holdout_year}",
         ]
