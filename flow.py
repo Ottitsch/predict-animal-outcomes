@@ -192,9 +192,9 @@ class AnimalOutcomeFlow(FlowSpec):
 
         out_dir = runs.step_dir(self.run_id, "data_tests")
         stdout_log = out_dir / "stdout.log"
-        junit = "/out/junit.xml" if USE_CONTAINERS else str(out_dir / "junit.xml")
+        report = "/out/report.json" if USE_CONTAINERS else str(out_dir / "report.json")
         cmd = [
-            "python", "-m", "pytest", "tests/", "-q", f"--junitxml={junit}",
+            "python", "-m", "pytest", "tests/", "-q", f"--json-report", f"--json-report-file={report}",
             f"--train-years={self.train_years}",
             f"--holdout-year={self.holdout_year}",
         ]
