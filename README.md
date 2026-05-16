@@ -173,13 +173,8 @@ docker/build.sh                                   # ~3 min first time
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    -e HOST_PROJECT_DIR="$PWD" \
     pao-host:dev run
 ```
-
-`HOST_PROJECT_DIR` is the absolute path to the repo *on the host machine*,
-needed because the bind-mount paths are interpreted by the host's Docker
-daemon (not by anything inside the host container).
 
 ### How the host knows when a step finishes
 
@@ -197,7 +192,7 @@ runs/<ISO-timestamp>__<short-sha>/
   flow.json                   run-level envelope (parameters, status, timings)
   data_tests/
     stdout.log
-    junit.xml
+    report.json
     returncode.txt
   train/
     stdout.log
