@@ -1,0 +1,51 @@
+name: monitoring
+
+# Prediction-drift monitoring for a registered model. Runs on a schedule (so a
+# drift in fresh data is caught without anyone kicking it off) and can also be
+# dispatched manually against a specific model version. The monitored model must
+# already exist under runs/ (produced by the training pipeline).
+on:
+  workflow_dispatch:
+    inputs:
+      model_id:
+        description: "Model to monitor for drift. Empty -> latest registered."
+        required: false
+        default: ""
+  schedule:
+    # Weekly, Monday 06:00 UTC. Drift is a slow signal; weekly is plenty.
+    - cron: "0 6 * * 1"
+
+jobs:
+  monitoring:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: configure git
+        run: |
+          git config user.name "ottitsch"
+          git config user.email "ottitsch.work@gmail.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+      - name: copy docker cli for host image
+        run: cp "$(which docker)" docker-cli-bin
+
+      - name: build images
+        run: bash docker/build.sh dev host monitor
+
+      - name: monitor (prediction drift)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}":/work -w /work \
+            -e GIT_COMMIT_SHA=${{ github.sha }} \
+            pao-host:dev monitor_flow.py run --model_id "${{ inputs.model_id }}"
+
+      - name: save artifacts
+        run: |
+          git add runs/
+          git commit --no-gpg-sign -m "ci: save monitoring artifacts"
+          git push origin "${{ github.ref_name }}"

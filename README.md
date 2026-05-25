@@ -325,15 +325,18 @@ host, still capturing stdout into the run dir's per-step `stdout.log`.
 
 ## GitHub Actions
 
-Both workflows are **manual** (`workflow_dispatch`) -- nothing runs on every
-commit -- and each builds only the images it actually uses. They commit the
-resulting `runs/` artifacts back to the branch they ran on.
+Each workflow builds only the images it actually uses and commits the resulting
+`runs/` artifacts back to the branch it ran on. The training and A/B workflows
+are **manual** (`workflow_dispatch`); the monitor also runs on a weekly
+**schedule** so drift in fresh data is caught without anyone kicking it off.
 
-- **`.github/workflows/pipeline.yml`** (`training-pipeline`): builds the
+- **`.github/workflows/pipeline.yml`** (`training-pipeline`, manual): builds the
   training images and runs the training flow (data tests -> train ->
-  robustness).
-- **`.github/workflows/post-deployment.yml`** (`post-deployment`): builds the
-  monitor + ab images and runs the drift monitor and the A/B comparison. Takes
-  `run_id_a` / `run_id_b` (the two versions to compare), `test_id`, and an
-  optional `model_id` (which model to monitor; empty -> latest) as dispatch
-  inputs.
+  robustness). This is the flow that *produces* model versions.
+- **`.github/workflows/monitoring.yml`** (`monitoring`, scheduled + manual):
+  builds the monitor image and runs the prediction-drift monitor. Takes an
+  optional `model_id` (which model to monitor; empty -> latest) as a dispatch
+  input.
+- **`.github/workflows/ab-test.yml`** (`ab-test`, manual): builds the ab image
+  and runs the offline A/B comparison of two versions. Takes `run_id_a` /
+  `run_id_b` (the two versions to compare) and `test_id` as dispatch inputs.
