@@ -1,29 +1,25 @@
-name: post-deployment
+name: ab-test
 
-# Manual only. Runs the post-deployment flows against already-registered model
-# versions: prediction-drift monitoring + an offline A/B comparison of two
-# versions. The two model run ids must already exist under runs/ (produced by
-# the training pipeline).
+# Manual only. Offline A/B comparison of two registered model versions on the
+# shared unseen segment. Kicked off deliberately when comparing two specific
+# versions; both run ids must already exist under runs/ (produced by the
+# training pipeline).
 on:
   workflow_dispatch:
     inputs:
       run_id_a:
-        description: "Run id of model version A (for the A/B compare)."
+        description: "Run id of model version A."
         required: true
       run_id_b:
-        description: "Run id of model version B (for the A/B compare)."
+        description: "Run id of model version B."
         required: true
       test_id:
         description: "Experiment id: salts the A/B split and tags results."
         required: false
         default: "ab"
-      model_id:
-        description: "Model to monitor for drift. Empty -> latest registered."
-        required: false
-        default: ""
 
 jobs:
-  post-deployment:
+  ab-test:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -41,15 +37,7 @@ jobs:
         run: cp "$(which docker)" docker-cli-bin
 
       - name: build images
-        run: bash docker/build.sh dev host monitor ab
-
-      - name: monitor (prediction drift)
-        run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v "${{ github.workspace }}":/work -w /work \
-            -e GIT_COMMIT_SHA=${{ github.sha }} \
-            pao-host:dev monitor_flow.py run --model_id "${{ inputs.model_id }}"
+        run: bash docker/build.sh dev host ab
 
       - name: a/b compare two versions
         run: |
@@ -65,5 +53,5 @@ jobs:
       - name: save artifacts
         run: |
           git add runs/
-          git commit --no-gpg-sign -m "ci: save monitoring + a/b artifacts"
+          git commit --no-gpg-sign -m "ci: save a/b artifacts"
           git push origin "${{ github.ref_name }}"
