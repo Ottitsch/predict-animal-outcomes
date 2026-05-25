@@ -1,0 +1,33 @@
+{
+  "run_id": "2026-05-25T13-15-09Z__5a31817",
+  "segment_year": 2024,
+  "n_segment_rows": 11812,
+  "reference_distribution": {
+    "Adoption": 0.6098707479454905,
+    "Died": 6.501612399875169e-06,
+    "Disposal": 0.0001690419223967544,
+    "Euthanasia": 0.040719598460418185,
+    "Missing": 0.0,
+    "Relocate": 0.0,
+    "Return to Owner": 0.08881852699469468,
+    "Rto-Adopt": 0.0,
+    "Stolen": 0.0,
+    "Transfer": 0.2604155830646
+  },
+  "observed_distribution": {
+    "Adoption": 0.6477311208940061,
+    "Died": 0.0,
+    "Disposal": 0.0,
+    "Euthanasia": 0.029800203183203523,
+    "Missing": 0.0,
+    "Relocate": 0.0,
+    "Return to Owner": 0.05807653233999323,
+    "Rto-Adopt": 0.0,
+    "Stolen": 0.0,
+    "Transfer": 0.26439214358279717
+  },
+  "kl_divergence": 0.009035042347004786,
+  "threshold": 0.1,
+  "drift_detected": false,
+  "segment_note": "Segment = the holdout year (2024). It is the most recent full calendar year and was never part of any training run (training uses 2014-2023), so the model's predictions on it are a clean stand-in for 'fresh production traffic'. Partial years (2013, 2025) are excluded upstream so the segment is a like-for-like full year, not a seasonal slice."
+}
