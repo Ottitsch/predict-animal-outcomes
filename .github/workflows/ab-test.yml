@@ -45,7 +45,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
             -e GIT_COMMIT_SHA=${{ github.sha }} \
-            pao-host:dev ab_flow.py run \
+            pao-host:dev flows/ab_flow.py run \
               --run_id_a "${{ inputs.run_id_a }}" \
               --run_id_b "${{ inputs.run_id_b }}" \
               --test_id "${{ inputs.test_id }}"

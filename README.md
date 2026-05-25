@@ -18,20 +18,21 @@ python prepare_data.py
 pytest tests/
 
 # Run the full flow: data tests -> train -> robustness validation.
-python flow.py run
+python flows/flow.py run
 
 # Demonstrate the training error path: training raises before fitting and
 # the flow exits non-zero. Recovery is just a plain re-run.
-python flow.py run --simulate_interrupt True
+python flows/flow.py run --simulate_interrupt True
 ```
 
 ## Repository layout
 
 ```
 prepare_data.py            CSV -> parquet (raw + per-full-year clean splits)
-flow.py                    Metaflow flow: data_tests -> train -> robustness
-monitor_flow.py            Metaflow flow: post-deployment prediction-drift monitor
-ab_flow.py                 Metaflow flow: offline A/B comparison of two versions
+flows/                     Metaflow flow drivers (entry points)
+  flow.py                  data_tests -> train -> robustness
+  monitor_flow.py          post-deployment prediction-drift monitor
+  ab_flow.py               offline A/B comparison of two versions
 src/
   data.py                  per-year loaders + feature schema
   training.py              LogisticRegression fit, skops save, register
@@ -157,10 +158,10 @@ the model's training-time reference.
 
 ```bash
 # latest model, default segment (holdout year 2024)
-python monitor_flow.py run
+python flows/monitor_flow.py run
 
 # a specific version
-python monitor_flow.py run --model_id <run-id>
+python flows/monitor_flow.py run --model_id <run-id>
 ```
 
 - **What it measures**: prediction (output) drift -- only the distribution of
@@ -187,7 +188,7 @@ segment. It forks into two parallel branches (one per version), each scoring
 *its half* of the segment, then a join step compares accuracy and macro-F1.
 
 ```bash
-python ab_flow.py run \
+python flows/ab_flow.py run \
     --run_id_a <version-a-run-id> \
     --run_id_b <version-b-run-id> \
     --test_id my_experiment
@@ -223,7 +224,7 @@ so the steps execute in isolated containers:
 - `docker/requirements/ab.txt` (sklearn + skops, for A/B scoring)
 
 The top-level `requirements.txt` is the union, used only when running the flow
-host-natively (`USE_CONTAINERS=0 python flow.py run`).
+host-natively (`USE_CONTAINERS=0 python flows/flow.py run`).
 
 ## Containerized execution
 
@@ -238,7 +239,7 @@ host machine
   /var/run/docker.sock ──┐
   $PWD (the repo)  ──┐   │
                      │   │
-       pao-host:dev  (driver; runs flow.py | monitor_flow.py | ab_flow.py)
+       pao-host:dev  (driver; runs flows/flow.py | monitor_flow.py | ab_flow.py)
             │   spawns via docker.sock
             ├──► pao-data-tests:dev   (pytest + great_expectations)
             ├──► pao-train:dev        (sklearn + skops)
@@ -263,19 +264,19 @@ docker/build.sh dev host data-tests train robustness   # just the training pipel
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    pao-host:dev flow.py run
+    pao-host:dev flows/flow.py run
 
 # monitoring flow (one host image, flow passed as the command)
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    pao-host:dev monitor_flow.py run --model_id <run-id>
+    pao-host:dev flows/monitor_flow.py run --model_id <run-id>
 
 # A/B flow
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    pao-host:dev ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
+    pao-host:dev flows/ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
 ```
 
 ### How the host knows when a step finishes
@@ -316,9 +317,9 @@ so provenance is one `cd` away in either direction. On a successful run,
 ### Host-native fallback
 
 ```bash
-USE_CONTAINERS=0 python flow.py run
-USE_CONTAINERS=0 python monitor_flow.py run --model_id <run-id>
-USE_CONTAINERS=0 python ab_flow.py run --run_id_a <id-a> --run_id_b <id-b>
+USE_CONTAINERS=0 python flows/flow.py run
+USE_CONTAINERS=0 python flows/monitor_flow.py run --model_id <run-id>
+USE_CONTAINERS=0 python flows/ab_flow.py run --run_id_a <id-a> --run_id_b <id-b>
 ```
 Skips Docker entirely; each step runs as a plain `subprocess.Popen` on the
 host, still capturing stdout into the run dir's per-step `stdout.log`.

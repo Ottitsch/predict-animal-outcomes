@@ -34,7 +34,7 @@ Inject a training error to demonstrate the failure path:
     pao-host:dev run --simulate_interrupt True
 
 Run without containers (legacy, host-native):
-    USE_CONTAINERS=0 python flow.py run
+    USE_CONTAINERS=0 python flows/flow.py run
 """
 from __future__ import annotations
 
@@ -45,10 +45,16 @@ import sys
 import time
 from pathlib import Path
 
+# This driver lives in flows/; the repo root (its parent) holds config.yml, runs/,
+# and the src package. Put it on sys.path so `from src import ...` resolves whether
+# launched as `python flows/flow.py`, host-native, or in Metaflow's step
+# subprocesses -- in all of which sys.path[0] is flows/, not the repo root.
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
 import yaml
 from metaflow import FlowSpec, Parameter, step
 
-ROOT = Path(__file__).resolve().parent
 USE_CONTAINERS = os.environ.get("USE_CONTAINERS", "1") != "0"
 
 _cfg_path = ROOT / "config.yml"

@@ -88,7 +88,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
             -e GIT_COMMIT_SHA=${{ github.sha }} \
-            pao-host:dev flow.py run --auto_commit False "${args[@]}"
+            pao-host:dev flows/flow.py run --auto_commit False "${args[@]}"
 
       - name: save artifacts
         run: |

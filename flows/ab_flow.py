@@ -21,17 +21,22 @@ Run (containers):
     docker run --rm \\
         -v /var/run/docker.sock:/var/run/docker.sock \\
         -v "$PWD":/work -w /work \\
-        pao-host:dev ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
+        pao-host:dev flows/ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
 
 Run (host-native):
-    USE_CONTAINERS=0 python ab_flow.py run \\
+    USE_CONTAINERS=0 python flows/ab_flow.py run \\
         --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
 """
 from __future__ import annotations
 
 import json
+import sys
 import time
 from pathlib import Path
+
+# flows/ lives beside src/; put the repo root on sys.path so `from src ...`
+# resolves regardless of launch dir (see flows/flow.py for the full rationale).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from metaflow import FlowSpec, Parameter, step
 
