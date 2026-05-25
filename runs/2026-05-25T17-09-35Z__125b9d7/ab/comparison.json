@@ -1,0 +1,27 @@
+{
+  "test_id": "ab",
+  "segment_year": 2024,
+  "variant_a": {
+    "test_id": "ab",
+    "variant": "A",
+    "run_id": "2026-05-25T13-15-09Z__5a31817",
+    "segment_year": 2024,
+    "n_rows": 5934,
+    "accuracy": 0.8107516009437142,
+    "macro_f1": 0.3260720850733199
+  },
+  "variant_b": {
+    "test_id": "ab",
+    "variant": "B",
+    "run_id": "2026-05-25T16-55-13Z__13cf17a",
+    "segment_year": 2024,
+    "n_rows": 5878,
+    "accuracy": 0.8097992514460701,
+    "macro_f1": 0.2885811834633595
+  },
+  "deltas": {
+    "accuracy_b_minus_a": -0.0009523494976441116,
+    "macro_f1_b_minus_a": -0.037490901609960436
+  },
+  "winner_by_macro_f1": "A"
+}
