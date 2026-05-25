@@ -1,8 +1,46 @@
 name: training-pipeline
 
 # Manual only -- does not run on every commit. Trigger from the Actions tab.
+# Every input is optional; leave one blank to fall back to its config.yml
+# default, so the no-argument "Run workflow" still reproduces the configured
+# baseline. A supplied value overrides config.yml for that run only.
 on:
   workflow_dispatch:
+    inputs:
+      train_years:
+        description: "Comma-separated years to train on. Blank -> config.yml."
+        required: false
+        default: ""
+      holdout_year:
+        description: "Year for robustness evaluation. Blank -> config.yml."
+        required: false
+        default: ""
+      model_C:
+        description: "LogisticRegression inverse regularisation. Blank -> config.yml."
+        required: false
+        default: ""
+      model_class_weight:
+        description: "Class weighting. Blank -> config.yml."
+        required: false
+        type: choice
+        options: ["", "balanced"]
+        default: ""
+      model_solver:
+        description: "LogisticRegression solver. Blank -> config.yml."
+        required: false
+        type: choice
+        options: ["", "lbfgs", "liblinear", "newton-cg", "sag", "saga"]
+        default: ""
+      drop_features:
+        description: "Comma-separated categorical features to exclude. Blank -> config.yml."
+        required: false
+        default: ""
+      scale_age:
+        description: "Scale age_days. Blank -> config.yml."
+        required: false
+        type: choice
+        options: ["", "true", "false"]
+        default: ""
 
 jobs:
   pipeline:
@@ -26,12 +64,31 @@ jobs:
         run: bash docker/build.sh dev host data-tests train robustness
 
       - name: run pipeline
+        # Inputs are passed via env (not interpolated into the script) to avoid
+        # shell-injection, then appended only when non-empty so blank inputs keep
+        # config.yml as the single source of truth.
+        env:
+          TRAIN_YEARS: ${{ inputs.train_years }}
+          HOLDOUT_YEAR: ${{ inputs.holdout_year }}
+          MODEL_C: ${{ inputs.model_C }}
+          MODEL_CLASS_WEIGHT: ${{ inputs.model_class_weight }}
+          MODEL_SOLVER: ${{ inputs.model_solver }}
+          DROP_FEATURES: ${{ inputs.drop_features }}
+          SCALE_AGE: ${{ inputs.scale_age }}
         run: |
+          args=()
+          if [ -n "$TRAIN_YEARS" ];        then args+=(--train_years "$TRAIN_YEARS"); fi
+          if [ -n "$HOLDOUT_YEAR" ];       then args+=(--holdout_year "$HOLDOUT_YEAR"); fi
+          if [ -n "$MODEL_C" ];            then args+=(--model_C "$MODEL_C"); fi
+          if [ -n "$MODEL_CLASS_WEIGHT" ]; then args+=(--model_class_weight "$MODEL_CLASS_WEIGHT"); fi
+          if [ -n "$MODEL_SOLVER" ];       then args+=(--model_solver "$MODEL_SOLVER"); fi
+          if [ -n "$DROP_FEATURES" ];      then args+=(--drop_features "$DROP_FEATURES"); fi
+          if [ -n "$SCALE_AGE" ];          then args+=(--scale_age "$SCALE_AGE"); fi
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
             -e GIT_COMMIT_SHA=${{ github.sha }} \
-            pao-host:dev flow.py run --auto_commit False
+            pao-host:dev flow.py run --auto_commit False "${args[@]}"
 
       - name: save artifacts
         run: |
