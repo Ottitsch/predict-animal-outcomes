@@ -227,19 +227,24 @@ host-natively (`USE_CONTAINERS=0 python flow.py run`).
 
 ## Containerized execution
 
-The flow runs as a single host container that spawns a sibling container per
-step. Each step image installs only its own `docker/requirements/<step>.txt`.
+Each flow runs as a single host (driver) container that spawns a sibling
+container per step. There is **one** host image (`pao-host`): it carries only
+metaflow + the docker CLI and launches whichever flow you pass as its command,
+since the driver is an orchestrator, not a pipeline step. Each *step* image
+installs only its own `docker/requirements/<step>.txt`.
 
 ```
 host machine
   /var/run/docker.sock ──┐
   $PWD (the repo)  ──┐   │
                      │   │
-       pao-host:dev (driver, runs flow.py)
+       pao-host:dev  (driver; runs flow.py | monitor_flow.py | ab_flow.py)
             │   spawns via docker.sock
             ├──► pao-data-tests:dev   (pytest + great_expectations)
             ├──► pao-train:dev        (sklearn + skops)
-            └──► pao-robustness:dev   (sklearn + skops)
+            ├──► pao-robustness:dev   (sklearn + skops)
+            ├──► pao-monitor:dev      (sklearn + skops)   [monitor_flow]
+            └──► pao-ab:dev           (sklearn + skops)   [ab_flow]
 
   artifacts persist on the host repo via bind mount:
     data/processed/by_year/*.parquet, runs/<run-id>/* (incl. model/)
@@ -247,29 +252,30 @@ host machine
 
 ### Build + run
 
-```bash
-docker/build.sh                                   # ~3 min first time
-
-docker run --rm \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v "$PWD":/work -w /work \
-    pao-host:dev run
-```
-
-The monitoring and A/B flows follow the same host-spawns-step pattern, each with
-its own driver image (`pao-monitor-host`, `pao-ab-host`) spawning a step image
-(`pao-monitor`, `pao-ab`):
+`docker/build.sh [tag] [name ...]` builds every image by default, or only the
+named ones so a workflow builds just what it runs:
 
 ```bash
-docker run --rm \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v "$PWD":/work -w /work \
-    pao-monitor-host:dev run --model_id <run-id>
+docker/build.sh                                   # all images (~3 min first time)
+docker/build.sh dev host data-tests train robustness   # just the training pipeline
 
+# training flow
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    pao-ab-host:dev run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
+    pao-host:dev flow.py run
+
+# monitoring flow (one host image, flow passed as the command)
+docker run --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$PWD":/work -w /work \
+    pao-host:dev monitor_flow.py run --model_id <run-id>
+
+# A/B flow
+docker run --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$PWD":/work -w /work \
+    pao-host:dev ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
 ```
 
 ### How the host knows when a step finishes
@@ -316,3 +322,18 @@ USE_CONTAINERS=0 python ab_flow.py run --run_id_a <id-a> --run_id_b <id-b>
 ```
 Skips Docker entirely; each step runs as a plain `subprocess.Popen` on the
 host, still capturing stdout into the run dir's per-step `stdout.log`.
+
+## GitHub Actions
+
+Both workflows are **manual** (`workflow_dispatch`) -- nothing runs on every
+commit -- and each builds only the images it actually uses. They commit the
+resulting `runs/` artifacts back to the branch they ran on.
+
+- **`.github/workflows/pipeline.yml`** (`training-pipeline`): builds the
+  training images and runs the training flow (data tests -> train ->
+  robustness).
+- **`.github/workflows/post-deployment.yml`** (`post-deployment`): builds the
+  monitor + ab images and runs the drift monitor and the A/B comparison. Takes
+  `run_id_a` / `run_id_b` (the two versions to compare), `test_id`, and an
+  optional `model_id` (which model to monitor; empty -> latest) as dispatch
+  inputs.

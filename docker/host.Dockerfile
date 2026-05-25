@@ -19,5 +19,10 @@ RUN pip install --no-cache-dir \
 ENV PYTHONUNBUFFERED=1
 ENV METAFLOW_USER=pipeline
 
-ENTRYPOINT ["python", "flow.py"]
-CMD ["run"]
+# The host image is the flow *driver* (metaflow + docker CLI), not a pipeline
+# step, so a single image launches any flow. Pass the flow file as the command:
+#   docker run pao-host:dev flow.py run
+#   docker run pao-host:dev monitor_flow.py run --model_id <id>
+#   docker run pao-host:dev ab_flow.py run --run_id_a <a> --run_id_b <b>
+ENTRYPOINT ["python"]
+CMD ["flow.py", "run"]

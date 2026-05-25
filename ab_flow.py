@@ -21,7 +21,7 @@ Run (containers):
     docker run --rm \\
         -v /var/run/docker.sock:/var/run/docker.sock \\
         -v "$PWD":/work -w /work \\
-        pao-ab-host:dev run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
+        pao-host:dev ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
 
 Run (host-native):
     USE_CONTAINERS=0 python ab_flow.py run \\

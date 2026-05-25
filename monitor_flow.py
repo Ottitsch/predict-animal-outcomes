@@ -18,7 +18,7 @@ Run (containers):
     docker run --rm \\
         -v /var/run/docker.sock:/var/run/docker.sock \\
         -v "$PWD":/work -w /work \\
-        pao-monitor-host:dev run --model_id <model-run-id>
+        pao-host:dev monitor_flow.py run --model_id <model-run-id>
 
 Run (host-native):
     USE_CONTAINERS=0 python monitor_flow.py run --model_id <model-run-id>
