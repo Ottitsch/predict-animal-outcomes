@@ -34,7 +34,7 @@ Inject a training error to demonstrate the failure path:
     pao-host:dev run --simulate_interrupt True
 
 Run without containers (legacy, host-native):
-    USE_CONTAINERS=0 python flow.py run
+    USE_CONTAINERS=0 python flows/flow.py run
 """
 from __future__ import annotations
 
@@ -45,13 +45,22 @@ import sys
 import time
 from pathlib import Path
 
+# This driver lives in flows/; the repo root (its parent) holds runs/ and the
+# predict_animal_outcomes package. Put it on sys.path so `from
+# predict_animal_outcomes import ...` resolves whether launched as `python
+# flows/flow.py`, host-native, or in Metaflow's step subprocesses -- in all of
+# which sys.path[0] is flows/, not the repo root.
+FLOWS_DIR = Path(__file__).resolve().parent
+ROOT = FLOWS_DIR.parent
+sys.path.insert(0, str(ROOT))
+
 import yaml
 from metaflow import FlowSpec, Parameter, step
 
-ROOT = Path(__file__).resolve().parent
 USE_CONTAINERS = os.environ.get("USE_CONTAINERS", "1") != "0"
 
-_cfg_path = ROOT / "config.yml"
+# training_defaults.yml sits next to this driver in flows/.
+_cfg_path = FLOWS_DIR / "training_defaults.yml"
 _cfg = yaml.safe_load(_cfg_path.read_text()) if _cfg_path.exists() else {}
 
 
@@ -182,7 +191,7 @@ class AnimalOutcomeFlow(FlowSpec):
 
     @step
     def start(self):
-        from src import runs
+        from predict_animal_outcomes import runs
 
         self.run_id = runs.new_run_id()
         self.run_path = str(runs.run_dir(self.run_id))
@@ -215,7 +224,7 @@ class AnimalOutcomeFlow(FlowSpec):
         containerized test runner could be made strict by raising on non-zero
         returncode here.
         """
-        from src import runs
+        from predict_animal_outcomes import runs
 
         out_dir = runs.step_dir(self.run_id, "data_tests")
         stdout_log = out_dir / "stdout.log"
@@ -245,18 +254,18 @@ class AnimalOutcomeFlow(FlowSpec):
     def train(self):
         """Train + register the model in an isolated container.
 
-        Two failure modes are explicitly handled in ``src/training.py`` and
+        Two failure modes are explicitly handled in ``predict_animal_outcomes/training.py`` and
         propagate through the container exit code:
 
         * **Too-small training set** (``< 1000`` rows) -> exit 1
         * **Simulated mid-training error** (``simulate_interrupt=True``) -> exit 1
         """
-        from src import runs
+        from predict_animal_outcomes import runs
 
         out_dir = runs.step_dir(self.run_id, "train")
         stdout_log = out_dir / "stdout.log"
         cmd = [
-            "python", "-m", "src.training",
+            "python", "-m", "predict_animal_outcomes.training",
             "--run-id", self.run_id,
             "--years", self.train_years,
             "--model-c", str(self.model_C),
@@ -291,12 +300,12 @@ class AnimalOutcomeFlow(FlowSpec):
     @step
     def robustness(self):
         """Validate the freshly trained model against the documented thresholds."""
-        from src import runs
+        from predict_animal_outcomes import runs
 
         out_dir = runs.step_dir(self.run_id, "robustness")
         stdout_log = out_dir / "stdout.log"
         cmd = [
-            "python", "-m", "src.robustness",
+            "python", "-m", "predict_animal_outcomes.robustness",
             "--run-id", self.run_id,
             "--holdout-year", str(self.holdout_year),
             "--out-dir", "/out" if USE_CONTAINERS else str(out_dir),
@@ -324,7 +333,7 @@ class AnimalOutcomeFlow(FlowSpec):
 
     @step
     def end(self):
-        from src import runs
+        from predict_animal_outcomes import runs
         runs.finalize(self.run_id, "passed",
                       train_accuracy=self.train_accuracy)
         print(f"=== flow complete ===")

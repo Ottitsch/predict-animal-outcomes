@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BY_YEAR_DIR = ROOT / "data" / "processed" / "by_year"
 
-_cfg_path = ROOT / "config.yml"
+_cfg_path = ROOT / "flows" / "training_defaults.yml"
 _cfg = yaml.safe_load(_cfg_path.read_text()) if _cfg_path.exists() else {}
 
 

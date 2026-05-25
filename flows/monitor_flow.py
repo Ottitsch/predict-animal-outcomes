@@ -5,7 +5,7 @@ This flow watches an already-registered model rather than producing one. It
 loads a model version by run id (default: the latest registered model), scores
 an unseen data segment (default: the holdout year 2024), and compares the
 predicted-class distribution against the model's training-time reference. See
-src/monitoring.py for the full description of what "prediction drift" means
+predict_animal_outcomes/monitoring.py for the full description of what "prediction drift" means
 here, where the reference comes from, and why the holdout year is the segment.
 
 Like the training flow, each step shells out to a step-specific container
@@ -18,20 +18,25 @@ Run (containers):
     docker run --rm \\
         -v /var/run/docker.sock:/var/run/docker.sock \\
         -v "$PWD":/work -w /work \\
-        pao-host:dev monitor_flow.py run --model_id <model-run-id>
+        pao-host:dev flows/monitor_flow.py run --model_id <model-run-id>
 
 Run (host-native):
-    USE_CONTAINERS=0 python monitor_flow.py run --model_id <model-run-id>
+    USE_CONTAINERS=0 python flows/monitor_flow.py run --model_id <model-run-id>
 """
 from __future__ import annotations
 
 import json
+import sys
 import time
 from pathlib import Path
 
+# flows/ lives beside predict_animal_outcomes/; put the repo root on sys.path so `from predict_animal_outcomes ...`
+# resolves regardless of launch dir (see flows/flow.py for the full rationale).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from metaflow import FlowSpec, Parameter, step
 
-from src import containers
+from predict_animal_outcomes import containers
 
 
 class MonitoringFlow(FlowSpec):
@@ -49,7 +54,7 @@ class MonitoringFlow(FlowSpec):
 
     @step
     def start(self):
-        from src import registry as reg
+        from predict_animal_outcomes import registry as reg
         self.model_run_id = self.model_id or reg.latest_run_id()
         print("=== Monitoring Flow ===")
         print(f"  model_run_id   = {self.model_run_id}")
@@ -64,7 +69,7 @@ class MonitoringFlow(FlowSpec):
         out_dir = containers.ROOT / out_subpath
         stdout_log = out_dir / "stdout.log"
         cmd = [
-            "python", "-m", "src.monitoring",
+            "python", "-m", "predict_animal_outcomes.monitoring",
             "--run-id", self.model_run_id,
             "--segment-year", str(self.segment_year),
             "--out-dir", "/out" if containers.USE_CONTAINERS else str(out_dir),

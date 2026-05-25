@@ -42,7 +42,7 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
             -e GIT_COMMIT_SHA=${{ github.sha }} \
-            pao-host:dev monitor_flow.py run --model_id "${{ inputs.model_id }}"
+            pao-host:dev flows/monitor_flow.py run --model_id "${{ inputs.model_id }}"
 
       - name: save artifacts
         run: |

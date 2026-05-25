@@ -12,27 +12,28 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
 # Materialise the parquet datasets (raw + per-year clean splits).
-python prepare_data.py
+python data/prepare_data.py
 
 # Run the data quality tests on the raw dataset.
 pytest tests/
 
 # Run the full flow: data tests -> train -> robustness validation.
-python flow.py run
+python flows/flow.py run
 
 # Demonstrate the training error path: training raises before fitting and
 # the flow exits non-zero. Recovery is just a plain re-run.
-python flow.py run --simulate_interrupt True
+python flows/flow.py run --simulate_interrupt True
 ```
 
 ## Repository layout
 
 ```
-prepare_data.py            CSV -> parquet (raw + per-full-year clean splits)
-flow.py                    Metaflow flow: data_tests -> train -> robustness
-monitor_flow.py            Metaflow flow: post-deployment prediction-drift monitor
-ab_flow.py                 Metaflow flow: offline A/B comparison of two versions
-src/
+flows/                     Metaflow flow drivers (entry points)
+  flow.py                  data_tests -> train -> robustness
+  monitor_flow.py          post-deployment prediction-drift monitor
+  ab_flow.py               offline A/B comparison of two versions
+  training_defaults.yml    default training-flow config (overridable per run)
+predict_animal_outcomes/
   data.py                  per-year loaders + feature schema
   training.py              LogisticRegression fit, skops save, register
   registry.py              tiny file-based model registry (list/load/schema)
@@ -52,6 +53,7 @@ runs/                      per-flow-run audit trail (auto-committed)
     ab/                    A/B comparison outputs (on A/B-test run dirs)
     flow.json              run envelope
 data/
+  prepare_data.py          CSV -> parquet (raw + per-full-year clean splits)
   raw/                     immutable source CSV + SHA256SUMS
   processed/
     dataset.parquet        full raw dataset (used by tests/)
@@ -77,7 +79,7 @@ excluded so per-year evaluations are apples-to-apples. The per-year files have
 
 The model + transform choices that affect behaviour (`model_C`,
 `model_class_weight`, `model_solver`, `drop_features`, `scale_age`) live in
-`config.yml` as flow configuration rather than hard-coded in `training.py`, and
+`flows/training_defaults.yml` as flow configuration rather than hard-coded in `training.py`, and
 each is overridable as a CLI parameter of the same name. Two runs that differ in
 these values are two distinct, independently reproducible model **versions**;
 the exact values are recorded in the run envelope and in the model schema
@@ -89,7 +91,7 @@ which is purpose-built for sklearn objects and avoids pickle's
 arbitrary-code-execution risk on load.
 
 ### Versioning (run-scoped file-based registry)
-`src/registry.py` is a small, file-based model registry used in place of
+`predict_animal_outcomes/registry.py` is a small, file-based model registry used in place of
 MLflow. Each successful flow run produces exactly one model, persisted next
 to that run's audit trail at `runs/<run-id>/model/`:
 
@@ -117,7 +119,7 @@ dataset swap is loud rather than silently re-poisoning every downstream
 artifact. Regenerate the file only when the source is intentionally updated.
 
 ### Robustness expectation
-`src/robustness.py` evaluates the freshly trained model on a holdout year
+`predict_animal_outcomes/robustness.py` evaluates the freshly trained model on a holdout year
 (default 2024, never seen during training) against two thresholds:
 
 1. **Beat the majority-class baseline by >= 5 percentage points.**
@@ -129,7 +131,7 @@ artifact. Regenerate the file only when the source is intentionally updated.
    Larger gaps signal overfitting or distribution drift the model hasn't
    generalised across.
 
-Both thresholds are documented inline in `src/robustness.py`. If the model
+Both thresholds are documented inline in `predict_animal_outcomes/robustness.py`. If the model
 fails either check, that should prompt a real investigation, not a threshold
 tweak.
 
@@ -157,10 +159,10 @@ the model's training-time reference.
 
 ```bash
 # latest model, default segment (holdout year 2024)
-python monitor_flow.py run
+python flows/monitor_flow.py run
 
 # a specific version
-python monitor_flow.py run --model_id <run-id>
+python flows/monitor_flow.py run --model_id <run-id>
 ```
 
 - **What it measures**: prediction (output) drift -- only the distribution of
@@ -178,7 +180,7 @@ python monitor_flow.py run --model_id <run-id>
   flagged at `>= 0.10`. The report (with the full distributions and the
   drift flag) is written to `runs/<model-run-id>/monitoring/report.json`.
 
-Rationale and the threshold choice are documented inline in `src/monitoring.py`.
+Rationale and the threshold choice are documented inline in `predict_animal_outcomes/monitoring.py`.
 
 ## A/B testing two versions
 
@@ -187,7 +189,7 @@ segment. It forks into two parallel branches (one per version), each scoring
 *its half* of the segment, then a join step compares accuracy and macro-F1.
 
 ```bash
-python ab_flow.py run \
+python flows/ab_flow.py run \
     --run_id_a <version-a-run-id> \
     --run_id_b <version-b-run-id> \
     --test_id my_experiment
@@ -209,7 +211,7 @@ python ab_flow.py run \
   `runs/<ab-run-id>/ab/`.
 
 The split, salting, and multi-test reasoning are documented inline in
-`src/ab_test.py`.
+`predict_animal_outcomes/ab_test.py`.
 
 ## Per-step dependencies
 
@@ -223,7 +225,7 @@ so the steps execute in isolated containers:
 - `docker/requirements/ab.txt` (sklearn + skops, for A/B scoring)
 
 The top-level `requirements.txt` is the union, used only when running the flow
-host-natively (`USE_CONTAINERS=0 python flow.py run`).
+host-natively (`USE_CONTAINERS=0 python flows/flow.py run`).
 
 ## Containerized execution
 
@@ -238,7 +240,7 @@ host machine
   /var/run/docker.sock ──┐
   $PWD (the repo)  ──┐   │
                      │   │
-       pao-host:dev  (driver; runs flow.py | monitor_flow.py | ab_flow.py)
+       pao-host:dev  (driver; runs flows/flow.py | monitor_flow.py | ab_flow.py)
             │   spawns via docker.sock
             ├──► pao-data-tests:dev   (pytest + great_expectations)
             ├──► pao-train:dev        (sklearn + skops)
@@ -263,19 +265,19 @@ docker/build.sh dev host data-tests train robustness   # just the training pipel
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    pao-host:dev flow.py run
+    pao-host:dev flows/flow.py run
 
 # monitoring flow (one host image, flow passed as the command)
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    pao-host:dev monitor_flow.py run --model_id <run-id>
+    pao-host:dev flows/monitor_flow.py run --model_id <run-id>
 
 # A/B flow
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    pao-host:dev ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
+    pao-host:dev flows/ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
 ```
 
 ### How the host knows when a step finishes
@@ -316,9 +318,9 @@ so provenance is one `cd` away in either direction. On a successful run,
 ### Host-native fallback
 
 ```bash
-USE_CONTAINERS=0 python flow.py run
-USE_CONTAINERS=0 python monitor_flow.py run --model_id <run-id>
-USE_CONTAINERS=0 python ab_flow.py run --run_id_a <id-a> --run_id_b <id-b>
+USE_CONTAINERS=0 python flows/flow.py run
+USE_CONTAINERS=0 python flows/monitor_flow.py run --model_id <run-id>
+USE_CONTAINERS=0 python flows/ab_flow.py run --run_id_a <id-a> --run_id_b <id-b>
 ```
 Skips Docker entirely; each step runs as a plain `subprocess.Popen` on the
 host, still capturing stdout into the run dir's per-step `stdout.log`.

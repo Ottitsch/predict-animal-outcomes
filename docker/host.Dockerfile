@@ -21,8 +21,8 @@ ENV METAFLOW_USER=pipeline
 
 # The host image is the flow *driver* (metaflow + docker CLI), not a pipeline
 # step, so a single image launches any flow. Pass the flow file as the command:
-#   docker run pao-host:dev flow.py run
-#   docker run pao-host:dev monitor_flow.py run --model_id <id>
-#   docker run pao-host:dev ab_flow.py run --run_id_a <a> --run_id_b <b>
+#   docker run pao-host:dev flows/flow.py run
+#   docker run pao-host:dev flows/monitor_flow.py run --model_id <id>
+#   docker run pao-host:dev flows/ab_flow.py run --run_id_a <a> --run_id_b <b>
 ENTRYPOINT ["python"]
-CMD ["flow.py", "run"]
+CMD ["flows/flow.py", "run"]
