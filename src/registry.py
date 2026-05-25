@@ -19,8 +19,6 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-import skops.io as sio
-
 ROOT = Path(__file__).resolve().parent.parent
 RUNS_DIR = ROOT / "runs"
 
@@ -31,6 +29,8 @@ def _model_dir(run_id: str) -> Path:
 
 def save(model, schema: dict, run_id: str) -> str:
     """Persist a model + schema under the given run. Returns the run_id."""
+    import skops.io as sio
+
     d = _model_dir(run_id)
     d.mkdir(parents=True, exist_ok=True)
     schema = {**schema, "run_id": run_id,
@@ -41,6 +41,11 @@ def save(model, schema: dict, run_id: str) -> str:
 
 
 def load(run_id: str):
+    # Imported lazily so the file-listing/schema helpers below (used by the
+    # flow drivers, which run in a minimal image without skops) don't pull in
+    # the serialization stack just to resolve a run id.
+    import skops.io as sio
+
     p = _model_dir(run_id) / "model.skops"
     return sio.load(p, trusted=sio.get_untrusted_types(file=p))
 

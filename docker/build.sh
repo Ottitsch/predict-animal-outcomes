@@ -16,9 +16,13 @@ build() {
         "${REPO_ROOT}"
 }
 
-build host       host.Dockerfile
-build data-tests data_tests.Dockerfile
-build train      train.Dockerfile
-build robustness robustness.Dockerfile
+build host         host.Dockerfile
+build data-tests   data_tests.Dockerfile
+build train        train.Dockerfile
+build robustness   robustness.Dockerfile
+build monitor      monitor.Dockerfile
+build ab           ab.Dockerfile
+build monitor-host monitor_host.Dockerfile
+build ab-host      ab_host.Dockerfile
 
 echo ">>> done"

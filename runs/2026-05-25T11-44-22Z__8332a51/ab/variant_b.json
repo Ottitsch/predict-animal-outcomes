@@ -1,0 +1,9 @@
+{
+  "test_id": "color_ablation",
+  "variant": "B",
+  "run_id": "2026-05-25T11-42-46Z__8332a51",
+  "segment_year": 2024,
+  "n_rows": 5933,
+  "accuracy": 0.8075172762514748,
+  "macro_f1": 0.28874487189612746
+}

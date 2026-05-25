@@ -1,0 +1,13 @@
+{
+  "run_id": "2026-05-25T11-42-46Z__8332a51",
+  "holdout_year": 2024,
+  "n_holdout_rows": 11812,
+  "majority_baseline_accuracy": 0.629105993904504,
+  "holdout_accuracy": 0.8115475787334914,
+  "train_accuracy": 0.7031493810464995,
+  "margin_over_baseline": 0.18244158482898742,
+  "train_holdout_gap": -0.10839819768699188,
+  "passed_majority": true,
+  "passed_gap": true,
+  "passed": true
+}
