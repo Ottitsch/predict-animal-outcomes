@@ -1,0 +1,53 @@
+{
+  "run_id": "2026-05-25T16-55-13Z__13cf17a",
+  "git_sha": "13cf17a",
+  "started_at": "2026-05-25T16:55:13.314588+00:00",
+  "ended_at": "2026-05-25T16:56:02.448221+00:00",
+  "status": "passed",
+  "parameters": {
+    "train_years": "2014,2015,2016,2017,2018,2019,2020,2021,2022",
+    "holdout_year": 2024,
+    "simulate_interrupt": false,
+    "use_containers": true,
+    "model_C": 1.0,
+    "model_class_weight": "",
+    "model_solver": "lbfgs",
+    "drop_features": "",
+    "scale_age": true
+  },
+  "steps": {
+    "data_tests": {
+      "status": "passed",
+      "returncode": 0,
+      "duration_s": 8.52,
+      "image": "pao-data-tests:dev"
+    },
+    "train": {
+      "status": "passed",
+      "returncode": 0,
+      "duration_s": 36.739,
+      "image": "pao-train:dev",
+      "train_accuracy": 0.6981901784587778
+    },
+    "robustness": {
+      "status": "passed",
+      "returncode": 0,
+      "duration_s": 2.544,
+      "image": "pao-robustness:dev",
+      "report": {
+        "run_id": "2026-05-25T16-55-13Z__13cf17a",
+        "holdout_year": 2024,
+        "n_holdout_rows": 11812,
+        "majority_baseline_accuracy": 0.629105993904504,
+        "holdout_accuracy": 0.8091771080257365,
+        "train_accuracy": 0.6981901784587778,
+        "margin_over_baseline": 0.18007111412123256,
+        "train_holdout_gap": -0.11098692956695866,
+        "passed_majority": true,
+        "passed_gap": true,
+        "passed": true
+      }
+    }
+  },
+  "train_accuracy": 0.6981901784587778
+}
