@@ -10,7 +10,7 @@ the classes the model predicts*. Concretely:
   * **Reference ("expected") distribution** -- the class mix the model produced
     when it scored its own training data. It is computed at training time and
     stored in the model schema as ``train_prediction_distribution`` (see
-    src/training.py). We source the expectation from the model's own training
+    predict_animal_outcomes/training.py). We source the expectation from the model's own training
     behaviour because that is, by construction, the output profile the model was
     shipped with: whatever mix of Adoption / Transfer / Return-to-Owner / ...
     it emitted on the data it learned from is the behaviour we implicitly

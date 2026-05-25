@@ -8,7 +8,7 @@ segment in an isolated ``pao-ab`` container, then a join step compares the two
 halves on accuracy and macro-F1.
 
 Traffic split, salting, and running multiple tests are all explained in
-src/ab_test.py; in short, each row is assigned to a variant by hashing
+predict_animal_outcomes/ab_test.py; in short, each row is assigned to a variant by hashing
 ``"<test_id>:<Animal ID>"`` mod 2, which is reproducible, ~50/50, and isolated
 per test via the ``test_id`` salt.
 
@@ -34,13 +34,13 @@ import sys
 import time
 from pathlib import Path
 
-# flows/ lives beside src/; put the repo root on sys.path so `from src ...`
+# flows/ lives beside predict_animal_outcomes/; put the repo root on sys.path so `from predict_animal_outcomes ...`
 # resolves regardless of launch dir (see flows/flow.py for the full rationale).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from metaflow import FlowSpec, Parameter, step
 
-from src import containers
+from predict_animal_outcomes import containers
 
 
 class ABTestFlow(FlowSpec):
@@ -65,7 +65,7 @@ class ABTestFlow(FlowSpec):
 
     @step
     def start(self):
-        from src import runs
+        from predict_animal_outcomes import runs
         self.ab_run_id = runs.new_run_id()
         self.out_subpath = f"runs/{self.ab_run_id}/ab"
         (containers.ROOT / self.out_subpath).mkdir(parents=True, exist_ok=True)
@@ -92,7 +92,7 @@ class ABTestFlow(FlowSpec):
         out_dir = containers.ROOT / self.out_subpath
         stdout_log = out_dir / f"stdout_{variant.lower()}.log"
         cmd = [
-            "python", "-m", "src.ab_test",
+            "python", "-m", "predict_animal_outcomes.ab_test",
             "--run-id", run_id,
             "--variant", variant,
             "--test-id", self.test_id,

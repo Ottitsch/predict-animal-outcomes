@@ -33,7 +33,7 @@ flows/                     Metaflow flow drivers (entry points)
   flow.py                  data_tests -> train -> robustness
   monitor_flow.py          post-deployment prediction-drift monitor
   ab_flow.py               offline A/B comparison of two versions
-src/
+predict_animal_outcomes/
   data.py                  per-year loaders + feature schema
   training.py              LogisticRegression fit, skops save, register
   registry.py              tiny file-based model registry (list/load/schema)
@@ -90,7 +90,7 @@ which is purpose-built for sklearn objects and avoids pickle's
 arbitrary-code-execution risk on load.
 
 ### Versioning (run-scoped file-based registry)
-`src/registry.py` is a small, file-based model registry used in place of
+`predict_animal_outcomes/registry.py` is a small, file-based model registry used in place of
 MLflow. Each successful flow run produces exactly one model, persisted next
 to that run's audit trail at `runs/<run-id>/model/`:
 
@@ -118,7 +118,7 @@ dataset swap is loud rather than silently re-poisoning every downstream
 artifact. Regenerate the file only when the source is intentionally updated.
 
 ### Robustness expectation
-`src/robustness.py` evaluates the freshly trained model on a holdout year
+`predict_animal_outcomes/robustness.py` evaluates the freshly trained model on a holdout year
 (default 2024, never seen during training) against two thresholds:
 
 1. **Beat the majority-class baseline by >= 5 percentage points.**
@@ -130,7 +130,7 @@ artifact. Regenerate the file only when the source is intentionally updated.
    Larger gaps signal overfitting or distribution drift the model hasn't
    generalised across.
 
-Both thresholds are documented inline in `src/robustness.py`. If the model
+Both thresholds are documented inline in `predict_animal_outcomes/robustness.py`. If the model
 fails either check, that should prompt a real investigation, not a threshold
 tweak.
 
@@ -179,7 +179,7 @@ python flows/monitor_flow.py run --model_id <run-id>
   flagged at `>= 0.10`. The report (with the full distributions and the
   drift flag) is written to `runs/<model-run-id>/monitoring/report.json`.
 
-Rationale and the threshold choice are documented inline in `src/monitoring.py`.
+Rationale and the threshold choice are documented inline in `predict_animal_outcomes/monitoring.py`.
 
 ## A/B testing two versions
 
@@ -210,7 +210,7 @@ python flows/ab_flow.py run \
   `runs/<ab-run-id>/ab/`.
 
 The split, salting, and multi-test reasoning are documented inline in
-`src/ab_test.py`.
+`predict_animal_outcomes/ab_test.py`.
 
 ## Per-step dependencies
 

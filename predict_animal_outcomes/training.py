@@ -106,7 +106,7 @@ def train(
     # Reference distribution for prediction-drift monitoring: the class mix the
     # model itself produced on the data it was trained on. The monitor compares
     # a later segment's predicted-class mix against this baseline (see
-    # src/monitoring.py for why this is the chosen "expected" behaviour).
+    # predict_animal_outcomes/monitoring.py for why this is the chosen "expected" behaviour).
     train_pred = pipe.predict(X)
     classes = [str(c) for c in pipe.classes_]
     counts = {c: 0 for c in classes}
