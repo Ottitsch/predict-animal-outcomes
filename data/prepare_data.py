@@ -25,7 +25,8 @@ import pyarrow.parquet as pq
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).parent
+# This script lives in data/; the repo root is its parent.
+ROOT = Path(__file__).resolve().parent.parent
 RAW_CSV = ROOT / "data" / "raw" / "Austin_Animal_Center_Outcomes__10_01_2013_to_05_05_2025_.csv"
 RAW_SHA = ROOT / "data" / "raw" / "SHA256SUMS"
 OUTPUT_DIR = ROOT / "data" / "processed"
