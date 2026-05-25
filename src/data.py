@@ -57,8 +57,26 @@ def load_years(years: Iterable[int]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+ID_COLUMN = "Animal ID"
+
+
 def split_xy(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     """Drop rows missing required features/target and return (X, y)."""
     needed = FEATURE_COLUMNS + [TARGET_COLUMN]
     clean = df.dropna(subset=needed)
     return clean[FEATURE_COLUMNS].copy(), clean[TARGET_COLUMN].copy()
+
+
+def split_xy_id(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
+    """Like ``split_xy`` but also return the per-row ``Animal ID``.
+
+    The id is needed by the A/B flow to assign each row to a variant. Rows are
+    filtered on exactly the same columns as ``split_xy`` so the (X, y) pair is
+    identical to what training/robustness see -- the only addition is the id
+    column carried alongside.
+    """
+    needed = FEATURE_COLUMNS + [TARGET_COLUMN]
+    clean = df.dropna(subset=needed)
+    return (clean[FEATURE_COLUMNS].copy(),
+            clean[TARGET_COLUMN].copy(),
+            clean[ID_COLUMN].astype(str).copy())

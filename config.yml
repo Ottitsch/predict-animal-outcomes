@@ -1,2 +1,13 @@
 train_years: "2014,2015,2016,2017,2018,2019,2020,2021,2022,2023"
 holdout_year: 2024
+
+# Model + transform choices that affect performance, lifted into flow
+# configuration so a run's behaviour is captured by its config (and recorded in
+# the model schema), not buried in the training code. Each is overridable as a
+# CLI parameter of the same name, so two runs with different values here become
+# two independently reproducible model versions.
+model_C: 1.0              # inverse regularisation strength for LogisticRegression
+model_class_weight: ""    # "" -> None; "balanced" -> reweight by class frequency
+model_solver: "lbfgs"     # LogisticRegression solver
+drop_features: ""         # comma-separated categorical features to exclude
+scale_age: true           # if false, age_days is passed through unscaled

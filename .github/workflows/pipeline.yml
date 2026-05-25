@@ -1,8 +1,7 @@
-name: docker-pipeline
+name: training-pipeline
 
+# Manual only -- does not run on every commit. Trigger from the Actions tab.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -24,7 +23,7 @@ jobs:
         run: cp "$(which docker)" docker-cli-bin
 
       - name: build images
-        run: bash docker/build.sh
+        run: bash docker/build.sh dev host data-tests train robustness
 
       - name: run pipeline
         run: |
@@ -32,10 +31,10 @@ jobs:
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
             -e GIT_COMMIT_SHA=${{ github.sha }} \
-            pao-host:dev run --auto_commit False
+            pao-host:dev flow.py run --auto_commit False
 
       - name: save artifacts
         run: |
           git add runs/
           git commit --no-gpg-sign -m "ci: save run artifacts and model"
-          git push origin main
+          git push origin "${{ github.ref_name }}"

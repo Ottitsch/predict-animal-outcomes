@@ -1,0 +1,69 @@
+name: post-deployment
+
+# Manual only. Runs the post-deployment flows against already-registered model
+# versions: prediction-drift monitoring + an offline A/B comparison of two
+# versions. The two model run ids must already exist under runs/ (produced by
+# the training pipeline).
+on:
+  workflow_dispatch:
+    inputs:
+      run_id_a:
+        description: "Run id of model version A (for the A/B compare)."
+        required: true
+      run_id_b:
+        description: "Run id of model version B (for the A/B compare)."
+        required: true
+      test_id:
+        description: "Experiment id: salts the A/B split and tags results."
+        required: false
+        default: "ab"
+      model_id:
+        description: "Model to monitor for drift. Empty -> latest registered."
+        required: false
+        default: ""
+
+jobs:
+  post-deployment:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: configure git
+        run: |
+          git config user.name "ottitsch"
+          git config user.email "ottitsch.work@gmail.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+      - name: copy docker cli for host image
+        run: cp "$(which docker)" docker-cli-bin
+
+      - name: build images
+        run: bash docker/build.sh dev host monitor ab
+
+      - name: monitor (prediction drift)
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}":/work -w /work \
+            -e GIT_COMMIT_SHA=${{ github.sha }} \
+            pao-host:dev monitor_flow.py run --model_id "${{ inputs.model_id }}"
+
+      - name: a/b compare two versions
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${{ github.workspace }}":/work -w /work \
+            -e GIT_COMMIT_SHA=${{ github.sha }} \
+            pao-host:dev ab_flow.py run \
+              --run_id_a "${{ inputs.run_id_a }}" \
+              --run_id_b "${{ inputs.run_id_b }}" \
+              --test_id "${{ inputs.test_id }}"
+
+      - name: save artifacts
+        run: |
+          git add runs/
+          git commit --no-gpg-sign -m "ci: save monitoring + a/b artifacts"
+          git push origin "${{ github.ref_name }}"

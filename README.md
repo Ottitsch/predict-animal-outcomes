@@ -30,19 +30,26 @@ python flow.py run --simulate_interrupt True
 ```
 prepare_data.py            CSV -> parquet (raw + per-full-year clean splits)
 flow.py                    Metaflow flow: data_tests -> train -> robustness
+monitor_flow.py            Metaflow flow: post-deployment prediction-drift monitor
+ab_flow.py                 Metaflow flow: offline A/B comparison of two versions
 src/
   data.py                  per-year loaders + feature schema
   training.py              LogisticRegression fit, skops save, register
   registry.py              tiny file-based model registry (list/load/schema)
   robustness.py            holdout-year + majority-baseline validation
-tests/                     data quality tests (pytest + great_expectations)
+  monitoring.py            prediction-drift (KL) against the training reference
+  ab_test.py               hash-based traffic split + per-variant scoring
+  containers.py            shared sibling-container spawn helpers (monitor/ab)
   runs.py                  per-run dirs + flow.json envelope
+tests/                     data quality tests (pytest + great_expectations)
 docker/                    Dockerfiles + build script for host + step containers
   requirements/            per-step requirements.txt (one file per container image)
 runs/                      per-flow-run audit trail (auto-committed)
   <run-id>/
     data_tests/, train/, robustness/   per-step stdout + reports
     model/                 registered model artifact for this run (skops + schema)
+    monitoring/            prediction-drift report for this model (if monitored)
+    ab/                    A/B comparison outputs (on A/B-test run dirs)
     flow.json              run envelope
 data/
   raw/                     immutable source CSV + SHA256SUMS
@@ -67,6 +74,14 @@ excluded so per-year evaluations are apples-to-apples. The per-year files have
 - **Model**: multinomial `LogisticRegression` over a one-hot-encoded feature
   matrix. Deliberately tiny -- we just need an artifact to version, load, and
   validate.
+
+The model + transform choices that affect behaviour (`model_C`,
+`model_class_weight`, `model_solver`, `drop_features`, `scale_age`) live in
+`config.yml` as flow configuration rather than hard-coded in `training.py`, and
+each is overridable as a CLI parameter of the same name. Two runs that differ in
+these values are two distinct, independently reproducible model **versions**;
+the exact values are recorded in the run envelope and in the model schema
+(`schema.json -> hyperparameters`).
 
 ### Serialization
 The trained `Pipeline(preprocessor + classifier)` is serialized with **skops**,
@@ -133,33 +148,103 @@ Two failure modes are explicitly handled:
   nothing meaningful to checkpoint -- the durable choice is "fail loudly,
   re-run cleanly" rather than half-trained-model gymnastics.
 
+## Post-deployment monitoring (prediction drift)
+
+`monitor_flow.py` watches an already-registered model instead of producing one.
+It loads a model by run id (default: the latest registered model), scores an
+unseen data segment, and compares the **predicted-class distribution** against
+the model's training-time reference.
+
+```bash
+# latest model, default segment (holdout year 2024)
+python monitor_flow.py run
+
+# a specific version
+python monitor_flow.py run --model_id <run-id>
+```
+
+- **What it measures**: prediction (output) drift -- only the distribution of
+  classes the model predicts, not features or labels. This is the cheapest
+  behaviour-tied signal because it needs only the model and unlabeled input, so
+  it runs before ground-truth outcomes are known.
+- **Expected ("reference") distribution**: the class mix the model produced on
+  its own training data, captured at train time and stored in the schema as
+  `train_prediction_distribution`. That is, by construction, the output profile
+  the model shipped with -- so anything materially different on fresh data is
+  the model behaving differently than at acceptance.
+- **Segment**: the holdout year (2024) by default -- the most recent full
+  calendar year, never used in training, a clean stand-in for fresh traffic.
+- **Metric + threshold**: KL divergence `KL(observed || reference)` in nats,
+  flagged at `>= 0.10`. The report (with the full distributions and the
+  drift flag) is written to `runs/<model-run-id>/monitoring/report.json`.
+
+Rationale and the threshold choice are documented inline in `src/monitoring.py`.
+
+## A/B testing two versions
+
+`ab_flow.py` compares two registered versions head-to-head on a shared unseen
+segment. It forks into two parallel branches (one per version), each scoring
+*its half* of the segment, then a join step compares accuracy and macro-F1.
+
+```bash
+python ab_flow.py run \
+    --run_id_a <version-a-run-id> \
+    --run_id_b <version-b-run-id> \
+    --test_id my_experiment
+```
+
+- **Traffic split**: each row is assigned to a variant by hashing
+  `"<test_id>:<Animal ID>"` (MD5) mod 2. This is deterministic/reproducible
+  (no RNG, no stored assignment table), uniform (~50/50), and a pure function of
+  the id (independent of row order or arrival time).
+- **Why salt with `test_id`**: salting the hash gives each experiment its own
+  pseudo-random partition, so unit assignments are decorrelated across tests
+  rather than the same animals always landing in the same bucket everywhere.
+- **Multiple / subsequent tests**: give every experiment a distinct `test_id`.
+  That one key both isolates each test's 50/50 partition (as the salt) and tags
+  every stored result, so concurrent or later tests never mix -- filter results
+  by `test_id` to read a single experiment.
+- **Outputs**: `variant_a.json`, `variant_b.json`, and the joined
+  `comparison.json` (per-metric deltas + winner by macro-F1) under
+  `runs/<ab-run-id>/ab/`.
+
+The split, salting, and multi-test reasoning are documented inline in
+`src/ab_test.py`.
+
 ## Per-step dependencies
 
 Each flow step has its own pinned requirements file under `docker/requirements/`
 so the steps execute in isolated containers:
-- `docker/requirements/host.txt` (just metaflow, for the driver container)
+- `docker/requirements/host.txt` (just metaflow, for the driver containers)
 - `docker/requirements/data_tests.txt`
 - `docker/requirements/train.txt`
 - `docker/requirements/robustness.txt`
+- `docker/requirements/monitor.txt` (sklearn + skops, for the drift monitor)
+- `docker/requirements/ab.txt` (sklearn + skops, for A/B scoring)
 
 The top-level `requirements.txt` is the union, used only when running the flow
 host-natively (`USE_CONTAINERS=0 python flow.py run`).
 
 ## Containerized execution
 
-The flow runs as a single host container that spawns a sibling container per
-step. Each step image installs only its own `docker/requirements/<step>.txt`.
+Each flow runs as a single host (driver) container that spawns a sibling
+container per step. There is **one** host image (`pao-host`): it carries only
+metaflow + the docker CLI and launches whichever flow you pass as its command,
+since the driver is an orchestrator, not a pipeline step. Each *step* image
+installs only its own `docker/requirements/<step>.txt`.
 
 ```
 host machine
   /var/run/docker.sock ──┐
   $PWD (the repo)  ──┐   │
                      │   │
-       pao-host:dev (driver, runs flow.py)
+       pao-host:dev  (driver; runs flow.py | monitor_flow.py | ab_flow.py)
             │   spawns via docker.sock
             ├──► pao-data-tests:dev   (pytest + great_expectations)
             ├──► pao-train:dev        (sklearn + skops)
-            └──► pao-robustness:dev   (sklearn + skops)
+            ├──► pao-robustness:dev   (sklearn + skops)
+            ├──► pao-monitor:dev      (sklearn + skops)   [monitor_flow]
+            └──► pao-ab:dev           (sklearn + skops)   [ab_flow]
 
   artifacts persist on the host repo via bind mount:
     data/processed/by_year/*.parquet, runs/<run-id>/* (incl. model/)
@@ -167,13 +252,30 @@ host machine
 
 ### Build + run
 
-```bash
-docker/build.sh                                   # ~3 min first time
+`docker/build.sh [tag] [name ...]` builds every image by default, or only the
+named ones so a workflow builds just what it runs:
 
+```bash
+docker/build.sh                                   # all images (~3 min first time)
+docker/build.sh dev host data-tests train robustness   # just the training pipeline
+
+# training flow
 docker run --rm \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$PWD":/work -w /work \
-    pao-host:dev run
+    pao-host:dev flow.py run
+
+# monitoring flow (one host image, flow passed as the command)
+docker run --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$PWD":/work -w /work \
+    pao-host:dev monitor_flow.py run --model_id <run-id>
+
+# A/B flow
+docker run --rm \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$PWD":/work -w /work \
+    pao-host:dev ab_flow.py run --run_id_a <id-a> --run_id_b <id-b> --test_id exp1
 ```
 
 ### How the host knows when a step finishes
@@ -215,6 +317,23 @@ so provenance is one `cd` away in either direction. On a successful run,
 
 ```bash
 USE_CONTAINERS=0 python flow.py run
+USE_CONTAINERS=0 python monitor_flow.py run --model_id <run-id>
+USE_CONTAINERS=0 python ab_flow.py run --run_id_a <id-a> --run_id_b <id-b>
 ```
 Skips Docker entirely; each step runs as a plain `subprocess.Popen` on the
-host, still capturing stdout into `runs/<run-id>/<step>/stdout.log`.
+host, still capturing stdout into the run dir's per-step `stdout.log`.
+
+## GitHub Actions
+
+Both workflows are **manual** (`workflow_dispatch`) -- nothing runs on every
+commit -- and each builds only the images it actually uses. They commit the
+resulting `runs/` artifacts back to the branch they ran on.
+
+- **`.github/workflows/pipeline.yml`** (`training-pipeline`): builds the
+  training images and runs the training flow (data tests -> train ->
+  robustness).
+- **`.github/workflows/post-deployment.yml`** (`post-deployment`): builds the
+  monitor + ab images and runs the drift monitor and the A/B comparison. Takes
+  `run_id_a` / `run_id_b` (the two versions to compare), `test_id`, and an
+  optional `model_id` (which model to monitor; empty -> latest) as dispatch
+  inputs.

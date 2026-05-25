@@ -157,6 +157,28 @@ class AnimalOutcomeFlow(FlowSpec):
         default=True,
         type=bool,
     )
+    # --- Model + transform hyperparameters (the knobs that define a version) ---
+    model_C = Parameter(
+        "model_C", help="Inverse regularisation strength for LogisticRegression.",
+        default=_cfg.get("model_C", 1.0), type=float,
+    )
+    model_class_weight = Parameter(
+        "model_class_weight",
+        help='"" -> None; "balanced" -> reweight classes by frequency.',
+        default=str(_cfg.get("model_class_weight", "")),
+    )
+    model_solver = Parameter(
+        "model_solver", help="LogisticRegression solver.",
+        default=_cfg.get("model_solver", "lbfgs"),
+    )
+    drop_features = Parameter(
+        "drop_features", help="Comma-separated categorical features to exclude.",
+        default=str(_cfg.get("drop_features", "")),
+    )
+    scale_age = Parameter(
+        "scale_age", help="If True, scale age_days; otherwise pass it through.",
+        default=bool(_cfg.get("scale_age", True)), type=bool,
+    )
 
     @step
     def start(self):
@@ -169,6 +191,11 @@ class AnimalOutcomeFlow(FlowSpec):
             "holdout_year": self.holdout_year,
             "simulate_interrupt": self.simulate_interrupt,
             "use_containers": USE_CONTAINERS,
+            "model_C": self.model_C,
+            "model_class_weight": self.model_class_weight,
+            "model_solver": self.model_solver,
+            "drop_features": self.drop_features,
+            "scale_age": self.scale_age,
         })
         print(f"=== Animal Outcome Flow ===")
         print(f"  run_id             = {self.run_id}")
@@ -232,6 +259,11 @@ class AnimalOutcomeFlow(FlowSpec):
             "python", "-m", "src.training",
             "--run-id", self.run_id,
             "--years", self.train_years,
+            "--model-c", str(self.model_C),
+            "--model-class-weight", self.model_class_weight,
+            "--model-solver", self.model_solver,
+            "--drop-features", self.drop_features,
+            "--scale-age", "true" if self.scale_age else "false",
             "--out-dir", "/out" if USE_CONTAINERS else str(out_dir),
         ]
         if self.simulate_interrupt:
