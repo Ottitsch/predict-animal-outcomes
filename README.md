@@ -78,7 +78,7 @@ excluded so per-year evaluations are apples-to-apples. The per-year files have
 
 The model + transform choices that affect behaviour (`model_C`,
 `model_class_weight`, `model_solver`, `drop_features`, `scale_age`) live in
-`config.yml` as flow configuration rather than hard-coded in `training.py`, and
+`training_defaults.yml` as flow configuration rather than hard-coded in `training.py`, and
 each is overridable as a CLI parameter of the same name. Two runs that differ in
 these values are two distinct, independently reproducible model **versions**;
 the exact values are recorded in the run envelope and in the model schema

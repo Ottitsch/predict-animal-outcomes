@@ -45,7 +45,7 @@ import sys
 import time
 from pathlib import Path
 
-# This driver lives in flows/; the repo root (its parent) holds config.yml, runs/,
+# This driver lives in flows/; the repo root (its parent) holds training_defaults.yml, runs/,
 # and the predict_animal_outcomes package. Put it on sys.path so `from predict_animal_outcomes import ...` resolves whether
 # launched as `python flows/flow.py`, host-native, or in Metaflow's step
 # subprocesses -- in all of which sys.path[0] is flows/, not the repo root.
@@ -57,7 +57,7 @@ from metaflow import FlowSpec, Parameter, step
 
 USE_CONTAINERS = os.environ.get("USE_CONTAINERS", "1") != "0"
 
-_cfg_path = ROOT / "config.yml"
+_cfg_path = ROOT / "training_defaults.yml"
 _cfg = yaml.safe_load(_cfg_path.read_text()) if _cfg_path.exists() else {}
 
 

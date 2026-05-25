@@ -1,42 +1,42 @@
 name: training-pipeline
 
 # Manual only -- does not run on every commit. Trigger from the Actions tab.
-# Every input is optional; leave one blank to fall back to its config.yml
+# Every input is optional; leave one blank to fall back to its training_defaults.yml
 # default, so the no-argument "Run workflow" still reproduces the configured
-# baseline. A supplied value overrides config.yml for that run only.
+# baseline. A supplied value overrides training_defaults.yml for that run only.
 on:
   workflow_dispatch:
     inputs:
       train_years:
-        description: "Comma-separated years to train on. Blank -> config.yml."
+        description: "Comma-separated years to train on. Blank -> training_defaults.yml."
         required: false
         default: ""
       holdout_year:
-        description: "Year for robustness evaluation. Blank -> config.yml."
+        description: "Year for robustness evaluation. Blank -> training_defaults.yml."
         required: false
         default: ""
       model_C:
-        description: "LogisticRegression inverse regularisation. Blank -> config.yml."
+        description: "LogisticRegression inverse regularisation. Blank -> training_defaults.yml."
         required: false
         default: ""
       model_class_weight:
-        description: "Class weighting. Blank -> config.yml."
+        description: "Class weighting. Blank -> training_defaults.yml."
         required: false
         type: choice
         options: ["", "balanced"]
         default: ""
       model_solver:
-        description: "LogisticRegression solver. Blank -> config.yml."
+        description: "LogisticRegression solver. Blank -> training_defaults.yml."
         required: false
         type: choice
         options: ["", "lbfgs", "liblinear", "newton-cg", "sag", "saga"]
         default: ""
       drop_features:
-        description: "Comma-separated categorical features to exclude. Blank -> config.yml."
+        description: "Comma-separated categorical features to exclude. Blank -> training_defaults.yml."
         required: false
         default: ""
       scale_age:
-        description: "Scale age_days. Blank -> config.yml."
+        description: "Scale age_days. Blank -> training_defaults.yml."
         required: false
         type: choice
         options: ["", "true", "false"]
@@ -66,7 +66,7 @@ jobs:
       - name: run pipeline
         # Inputs are passed via env (not interpolated into the script) to avoid
         # shell-injection, then appended only when non-empty so blank inputs keep
-        # config.yml as the single source of truth.
+        # training_defaults.yml as the single source of truth.
         env:
           TRAIN_YEARS: ${{ inputs.train_years }}
           HOLDOUT_YEAR: ${{ inputs.holdout_year }}

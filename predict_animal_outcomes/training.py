@@ -51,7 +51,7 @@ def _build_pipeline(
 ) -> Pipeline:
     """Assemble the training pipeline from configurable hyperparameters.
 
-    Every knob here is driven by a flow parameter (see ``config.yml`` / the
+    Every knob here is driven by a flow parameter (see ``training_defaults.yml`` / the
     ``flow.py`` Parameters), so two runs that differ only in these values are
     two distinct, independently reproducible model versions.
     """
