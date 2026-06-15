@@ -45,7 +45,14 @@ jobs:
             pao-host:dev flows/monitor_flow.py run --model_id "${{ inputs.model_id }}"
 
       - name: save artifacts
+        # Monitoring output is deterministic, so a re-run against the same model
+        # and segment produces no changes. Skip the commit/push in that case
+        # instead of letting `git commit` fail the job with "nothing to commit".
         run: |
           git add runs/
-          git commit --no-gpg-sign -m "ci: save monitoring artifacts"
-          git push origin "${{ github.ref_name }}"
+          if git diff --cached --quiet; then
+            echo "no monitoring changes to commit"
+          else
+            git commit --no-gpg-sign -m "ci: save monitoring artifacts"
+            git push origin "${{ github.ref_name }}"
+          fi

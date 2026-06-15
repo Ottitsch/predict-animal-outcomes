@@ -53,5 +53,9 @@ jobs:
       - name: save artifacts
         run: |
           git add runs/
-          git commit --no-gpg-sign -m "ci: save a/b artifacts"
-          git push origin "${{ github.ref_name }}"
+          if git diff --cached --quiet; then
+            echo "no a/b artifacts to commit"
+          else
+            git commit --no-gpg-sign -m "ci: save a/b artifacts"
+            git push origin "${{ github.ref_name }}"
+          fi
