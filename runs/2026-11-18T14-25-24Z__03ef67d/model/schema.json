@@ -1,0 +1,80 @@
+{
+  "input": {
+    "categorical_features": [
+      "Animal Type",
+      "Intake Type",
+      "Intake Condition",
+      "Sex upon Intake",
+      "Breed",
+      "Color"
+    ],
+    "numeric_features": [
+      "age_days"
+    ],
+    "feature_columns": [
+      "Animal Type",
+      "Intake Type",
+      "Intake Condition",
+      "Sex upon Intake",
+      "Breed",
+      "Color",
+      "age_days"
+    ]
+  },
+  "output": {
+    "target_column": "Outcome Type",
+    "classes": [
+      "Adoption",
+      "Died",
+      "Disposal",
+      "Euthanasia",
+      "Missing",
+      "Relocate",
+      "Return to Owner",
+      "Rto-Adopt",
+      "Stolen",
+      "Transfer"
+    ],
+    "type": "categorical"
+  },
+  "hyperparameters": {
+    "model_C": 1.0,
+    "model_class_weight": null,
+    "model_solver": "lbfgs",
+    "drop_features": [],
+    "scale_age": true,
+    "max_iter": 1000
+  },
+  "code_dependencies": {
+    "python": "3.13.18",
+    "requirements_file": "docker/requirements/train.txt"
+  },
+  "git_sha": "03ef67d",
+  "train_years": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023
+  ],
+  "train_accuracy": 0.6217993034449474,
+  "train_prediction_distribution": {
+    "Adoption": 0.6952571644730835,
+    "Died": 7.174256160077221e-05,
+    "Disposal": 7.174256160077221e-05,
+    "Euthanasia": 0.047089208614325036,
+    "Missing": 0.0,
+    "Relocate": 0.0,
+    "Return to Owner": 0.13421728865293558,
+    "Rto-Adopt": 1.304410210923131e-05,
+    "Stolen": 0.0,
+    "Transfer": 0.12327980903434511
+  },
+  "run_id": "2026-11-18T14-25-24Z__03ef67d",
+  "created_at": "2026-11-18T14:26:23.477185+00:00"
+}
