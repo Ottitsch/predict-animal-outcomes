@@ -74,18 +74,24 @@ class MonitoringFlow(FlowSpec):
             "--segment-year", str(self.segment_year),
             "--out-dir", "/out" if containers.USE_CONTAINERS else str(out_dir),
         ]
+        report_path = out_dir / "report.json"
+        # Remove the previous run's report first, so a crash can never be read
+        # back as a fresh result.
+        report_path.unlink(missing_ok=True)
         t0 = time.monotonic()
         if containers.USE_CONTAINERS:
             rc = containers.docker_run("monitor", out_subpath, cmd, stdout_log)
         else:
             rc = containers.host_run(cmd, stdout_log)
         duration = round(time.monotonic() - t0, 3)
-        report_path = out_dir / "report.json"
-        self.report = json.loads(report_path.read_text()) if report_path.exists() else {}
-        # rc==1 here means "drift detected", which is a signal, not a flow error;
-        # we surface it via the report and a printed warning rather than failing.
-        self.drift_detected = rc == 1
         (out_dir / "returncode.txt").write_text(str(rc))
+        # rc==2 means "drift detected", which is a signal, not a flow error; we
+        # surface it via the report and a printed warning rather than failing.
+        # Any other non-zero code is a crash (bad model id, missing data, ...).
+        if rc not in (0, 2) or not report_path.exists():
+            raise RuntimeError(f"drift monitor failed with exit={rc}; see {stdout_log}")
+        self.report = json.loads(report_path.read_text())
+        self.drift_detected = rc == 2
         print(f"[drift] kl={self.report.get('kl_divergence'):.6f} "
               f"threshold={self.report.get('threshold')} "
               f"drift_detected={self.report.get('drift_detected')} "

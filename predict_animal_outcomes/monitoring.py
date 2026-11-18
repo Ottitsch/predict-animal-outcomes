@@ -26,7 +26,7 @@ reference)`` over the class set, in nats. KL is asymmetric and we deliberately
 put the *observed* distribution first: it penalises the model for putting
 probability mass on outcomes that were rare at training time, which is the
 direction we care about (a sudden surge of, say, Euthanasia predictions). Both
-distributions are Laplace-smoothed with a small epsilon so a class that is
+distributions get a small epsilon added to every class so a class that is
 absent on one side cannot send the divergence to infinity.
 
 Why prediction drift (rather than feature or label drift)?
@@ -54,6 +54,7 @@ from . import registry as reg
 
 DRIFT_THRESHOLD = 0.10  # nats
 _EPS = 1e-6
+EXIT_DRIFT = 2
 
 DRIFT_SEGMENT_NOTE = (
     "Segment = the holdout year (2024). It is the most recent full calendar "
@@ -144,9 +145,11 @@ def _cli() -> int:
         out = Path(args.out_dir)
         out.mkdir(parents=True, exist_ok=True)
         (out / "report.json").write_text(json.dumps(payload, indent=2))
-    # Non-zero exit signals drift so the flow can surface it; the report is
-    # always written first so the audit trail is complete either way.
-    return 1 if report.drift_detected else 0
+    # Exit 2 signals drift so the flow can surface it; the report is always
+    # written first so the audit trail is complete either way. Exit 1 stays
+    # reserved for crashes (Python's default for an uncaught exception), so the
+    # flow can tell "the model drifted" from "the monitor broke".
+    return EXIT_DRIFT if report.drift_detected else 0
 
 
 if __name__ == "__main__":
