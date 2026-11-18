@@ -47,7 +47,12 @@ def load(run_id: str):
     import skops.io as sio
 
     p = _model_dir(run_id) / "model.skops"
-    return sio.load(p, trusted=sio.get_untrusted_types(file=p))
+    # No ``trusted=`` list: skops then only loads types it trusts by default and
+    # raises on anything else. Passing ``get_untrusted_types(file=p)`` here
+    # would trust whatever the file itself declares, which defeats the point.
+    # This pipeline (ColumnTransformer, OneHotEncoder, StandardScaler,
+    # LogisticRegression) needs no extra types.
+    return sio.load(p)
 
 
 def schema(run_id: str) -> dict:
