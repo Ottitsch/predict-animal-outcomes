@@ -1,0 +1,33 @@
+name: tests
+
+# Every push and pull request: unit tests for the stay join and the A/B
+# statistics, the data tests on the committed stay files, and a check that the
+# committed stay files are what data/prepare_data.py builds from the raw CSVs.
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: install
+        run: pip install -r requirements.txt
+
+      - name: unit tests
+        run: python -m pytest tests/unit -q
+
+      - name: data tests
+        run: python -m pytest tests/ --ignore=tests/unit -q
+
+      - name: stays rebuild from the raw data
+        run: |
+          python data/prepare_data.py
+          git diff --exit-code -- data/processed/join_report.json

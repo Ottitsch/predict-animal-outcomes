@@ -40,15 +40,21 @@ jobs:
         run: bash docker/build.sh dev host ab
 
       - name: a/b compare two versions
+        # Dispatch inputs go through env, not into the script text, so crafted
+        # values can't inject shell commands.
+        env:
+          RUN_ID_A: ${{ inputs.run_id_a }}
+          RUN_ID_B: ${{ inputs.run_id_b }}
+          TEST_ID: ${{ inputs.test_id }}
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
             -e GIT_COMMIT_SHA=${{ github.sha }} \
             pao-host:dev flows/ab_flow.py run \
-              --run_id_a "${{ inputs.run_id_a }}" \
-              --run_id_b "${{ inputs.run_id_b }}" \
-              --test_id "${{ inputs.test_id }}"
+              --run_id_a "$RUN_ID_A" \
+              --run_id_b "$RUN_ID_B" \
+              --test_id "$TEST_ID"
 
       - name: save artifacts
         run: |

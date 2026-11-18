@@ -37,12 +37,16 @@ jobs:
         run: bash docker/build.sh dev host monitor
 
       - name: monitor (prediction drift)
+        # The dispatch input goes through env, not into the script text, so a
+        # crafted model_id can't inject shell commands.
+        env:
+          MODEL_ID: ${{ inputs.model_id }}
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             -v "${{ github.workspace }}":/work -w /work \
             -e GIT_COMMIT_SHA=${{ github.sha }} \
-            pao-host:dev flows/monitor_flow.py run --model_id "${{ inputs.model_id }}"
+            pao-host:dev flows/monitor_flow.py run --model_id "$MODEL_ID"
 
       - name: save artifacts
         # Monitoring output is deterministic, so a re-run against the same model
