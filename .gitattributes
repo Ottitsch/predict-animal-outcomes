@@ -1,0 +1,4 @@
+# Raw data is checked against SHA256SUMS byte for byte, so git must never
+# rewrite its line endings (core.autocrlf on Windows turns LF into CRLF).
+data/raw/*.csv -text
+data/raw/SHA256SUMS -text
