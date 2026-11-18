@@ -1,8 +1,8 @@
 name: tests
 
 # Every push and pull request: unit tests for the stay join and the A/B
-# statistics, the data tests on the committed stay files, and a check that the
-# committed stay files are what data/prepare_data.py builds from the raw CSVs.
+# statistics, the data tests on the committed stay files, and a rebuild of the
+# stay files from the raw CSVs that must reproduce the committed join counts.
 on:
   push:
   pull_request:
