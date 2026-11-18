@@ -37,10 +37,10 @@ does not account for all positive outcomes, since transfers to partner rescues
 are also significant. The adoption share is not stable, though: it rose
 steadily from 38% of 2014 stays to 62% of 2024 stays while transfers fell from
 33% to 22%. The first version of this test pooled all years and allowed 30% to
-60%, which hid that 2023 and 2024 are above 60%. The bounds now sit about ten
-points outside the observed range: below 30% would contradict Austin's no kill
-status, and above 75% would suggest transfers or returns are being recorded
-as adoptions.
+60%, which hid that recent years are above 60% (2024 is at 62%). The bounds
+now sit about ten points outside the observed range: below 30% would
+contradict Austin's no kill status, and above 75% would suggest transfers or
+returns are being recorded as adoptions.
 """
 import great_expectations as gx
 
