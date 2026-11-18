@@ -8,19 +8,29 @@ require it to clear two bars on a held-out year that it never saw during
 training (default: 2024):
 
   1. **Beat the majority-class baseline by a meaningful margin.**
-     A dummy classifier that always predicts the most common outcome
-     ("Adoption", ~49%) is the floor below which the model adds no value.
+     A dummy classifier that always predicts the holdout year's most common
+     outcome ("Adoption", 62% of 2024 stays) is the floor below which the model
+     adds no value. Fitting it on the holdout itself makes it the strictest
+     version of that baseline.
      We require ``model_accuracy >= majority_accuracy + MARGIN``
      with ``MARGIN = 0.05`` (5 percentage points). The choice of 5pp is small
      enough to not be defeated by year-to-year class-mix noise, and large
      enough that a model that merely re-discovers the prior would fail.
 
-  2. **No catastrophic train/holdout gap.**
-     We require ``train_accuracy - holdout_accuracy <= MAX_GAP`` with
-     ``MAX_GAP = 0.10`` (10 percentage points). A larger gap signals
-     overfitting to the training years or distribution drift that the model
-     hasn't generalised across, both of which we want to block before
-     deployment.
+  2. **No catastrophic train/holdout gap, in either direction.**
+     We require ``|train_accuracy - holdout_accuracy| <= MAX_GAP`` with
+     ``MAX_GAP = 0.10`` (10 percentage points). Train far above holdout means
+     overfitting to the training years. Holdout far *above* train is just as
+     much a warning: the holdout year looks different from the training years
+     (the adoption share rose from 38% of 2014 stays to 62% of 2024 stays), so
+     accuracy on it says little about the next year. The first version only
+     checked one direction and passed a model whose holdout beat train by 10.6
+     points.
+
+Accuracy alone hides the rare outcomes, so the report also carries macro F1
+(model and baseline) and the recall of every class. They are reported, not
+gated: most outcomes other than Adoption, Transfer, Return to Owner and
+Euthanasia have a few dozen rows a year, and no simple model recalls them.
 
 These thresholds catch the failure modes that matter before a model is shipped
 (useless models and over-fit/under-generalised models). They are deliberately
@@ -33,6 +43,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 from sklearn.dummy import DummyClassifier
+from sklearn.metrics import f1_score, recall_score
 
 from . import data as data_mod
 from . import registry as reg
@@ -51,6 +62,10 @@ class RobustnessReport:
     train_accuracy: float
     margin_over_baseline: float
     train_holdout_gap: float
+    holdout_macro_f1: float
+    majority_baseline_macro_f1: float
+    holdout_class_share: dict
+    holdout_recall_per_class: dict
     passed_majority: bool
     passed_gap: bool
     passed: bool
@@ -65,17 +80,22 @@ def evaluate(holdout_year: int, run_id: str) -> RobustnessReport:
     if len(X) == 0:
         raise RuntimeError(f"holdout year {holdout_year} has no usable rows")
 
-    holdout_acc = float((model.predict(X) == y.values).mean())
+    preds = model.predict(X)
+    holdout_acc = float((preds == y.values).mean())
 
     dummy = DummyClassifier(strategy="most_frequent").fit(X, y)
-    majority_acc = float((dummy.predict(X) == y.values).mean())
+    dummy_preds = dummy.predict(X)
+    majority_acc = float((dummy_preds == y.values).mean())
+
+    classes = sorted(y.unique())
+    recalls = recall_score(y, preds, labels=classes, average=None, zero_division=0)
 
     train_acc = float(schema.get("train_accuracy", float("nan")))
     margin = holdout_acc - majority_acc
     gap = train_acc - holdout_acc
 
     passed_majority = margin >= MAJORITY_MARGIN
-    passed_gap = gap <= MAX_TRAIN_HOLDOUT_GAP
+    passed_gap = abs(gap) <= MAX_TRAIN_HOLDOUT_GAP
     report = RobustnessReport(
         run_id=run_id,
         holdout_year=holdout_year,
@@ -85,6 +105,10 @@ def evaluate(holdout_year: int, run_id: str) -> RobustnessReport:
         train_accuracy=train_acc,
         margin_over_baseline=margin,
         train_holdout_gap=gap,
+        holdout_macro_f1=float(f1_score(y, preds, average="macro", zero_division=0)),
+        majority_baseline_macro_f1=float(f1_score(y, dummy_preds, average="macro", zero_division=0)),
+        holdout_class_share={c: float(v) for c, v in y.value_counts(normalize=True).items()},
+        holdout_recall_per_class={c: float(r) for c, r in zip(classes, recalls)},
         passed_majority=passed_majority,
         passed_gap=passed_gap,
         passed=passed_majority and passed_gap,
