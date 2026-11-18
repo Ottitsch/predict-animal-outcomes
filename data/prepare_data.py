@@ -1,65 +1,124 @@
 """
-Serialize the raw CSV dataset into Parquet files.
+Build the training data: one row per shelter stay, with only what is known at intake.
 
-Two artifacts are produced:
+Why stays and not outcome rows
+------------------------------
+The first version of this project trained on the Outcomes file alone. Its
+columns are recorded when the animal *leaves* the shelter, and two of them gave
+the answer away:
 
-1. ``data/processed/dataset.parquet`` -- the full raw dataset, used by the data
-   quality tests under ``tests/`` (which intentionally run against the
-   *uncleaned* data).
+* ``Sex upon Outcome`` says whether the animal was neutered by the time it
+  left. The shelter neuters animals before adoption, so "Neutered Male" and
+  "Spayed Female" rows are 67% and 72% adoptions while intact animals are 8%.
+* ``Age upon Outcome`` includes the length of the stay itself.
 
-2. ``data/processed/by_year/<year>.parquet`` -- a cleaned, per-full-year split used for
-   model training and evaluation. Cleaning consists of:
-     - Dropping rows where ``Outcome Type`` is null (target is required).
-     - Dropping the ``Outcome Subtype`` column (would leak the label).
-   Only *complete* calendar years are emitted (2014-2024); 2013 and 2025 are
-   partial in the source data and are excluded so per-year comparisons are
-   apples-to-apples.
+That model scored 0.81 on 2024, but a model that is asked at intake can't see
+either column. So we now join the Intakes file and predict each stay's outcome
+from intake time columns only (see ``predict_animal_outcomes/data.py``).
 
-Parquet is chosen for columnar efficiency and for preserving column types so
-that the type of ``DateTime`` does not have to be re-inferred on every read.
+How a stay is built
+-------------------
+Each intake is paired with the first outcome of the same ``Animal ID`` at or
+after it, as long as that outcome comes before the animal's next intake. An
+intake with no such outcome (the animal was still in the shelter when the
+snapshot was taken, or the record is missing) is dropped, and so is an
+outcome with no intake before it.
+
+Timestamps are read as Austin wall clock time in both files. The Outcomes
+export mixes rows with a ``-05:00`` offset and rows with none; parsing them
+with ``utc=True`` moves the rows without an offset by five to six hours and
+made about 10% of outcomes look as if they happened before their intake.
+
+Outputs
+-------
+``data/processed/by_year/<year>.parquet``  stays by *intake* year, full years
+2014 to 2024 only (2013 starts in October and 2025 ends in May).
+``data/processed/join_report.json``        how many rows matched, for the README.
 """
 import hashlib
-import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+
 # This script lives in data/; the repo root is its parent.
 ROOT = Path(__file__).resolve().parent.parent
-RAW_CSV = ROOT / "data" / "raw" / "Austin_Animal_Center_Outcomes__10_01_2013_to_05_05_2025_.csv"
-RAW_SHA = ROOT / "data" / "raw" / "SHA256SUMS"
+RAW_DIR = ROOT / "data" / "raw"
+OUTCOMES_CSV = RAW_DIR / "Austin_Animal_Center_Outcomes__10_01_2013_to_05_05_2025_.csv"
+INTAKES_CSV = RAW_DIR / "Austin_Animal_Center_Intakes__10_01_2013_to_05_05_2025_.csv"
+RAW_SHA = RAW_DIR / "SHA256SUMS"
 OUTPUT_DIR = ROOT / "data" / "processed"
-RAW_PARQUET = OUTPUT_DIR / "dataset.parquet"
 BY_YEAR_DIR = OUTPUT_DIR / "by_year"
+JOIN_REPORT = OUTPUT_DIR / "join_report.json"
+
+# Full calendar years of intakes in the source data.
+FULL_YEARS = list(range(2014, 2025))
+
+# Columns kept per stay. Everything except the outcome columns is known at intake.
+STAY_COLUMNS = [
+    "Animal ID", "intake_time", "Animal Type", "Intake Type", "Intake Condition",
+    "Sex upon Intake", "Age upon Intake", "Breed", "Color",
+    "outcome_time", "Outcome Type",
+]
 
 
 def _verify_raw_sha() -> None:
-    """Fail loudly if the raw CSV doesn't match the recorded SHA256.
+    """Fail loudly if a raw CSV is missing from SHA256SUMS or doesn't match it.
 
     A silent CSV swap would invalidate every downstream artifact (parquet,
     trained model, tests). Checking once at the entry point is cheap.
     """
-    if not RAW_SHA.exists():
-        return
     expected = {}
-    for line in RAW_SHA.read_text().splitlines():
+    for line in RAW_SHA.read_text(encoding="utf-8").splitlines():
         digest, name = line.split(maxsplit=1)
         expected[name.strip()] = digest
-    actual = hashlib.sha256(RAW_CSV.read_bytes()).hexdigest()
-    want = expected.get(RAW_CSV.name)
-    if want is None:
-        return
-    if actual != want:
-        raise RuntimeError(
-            f"SHA mismatch for {RAW_CSV.name}: expected {want}, got {actual}. "
-            f"Refusing to proceed; regenerate {RAW_SHA} only if the source "
-            f"dataset has been intentionally updated."
-        )
+    for csv in (OUTCOMES_CSV, INTAKES_CSV):
+        want = expected.get(csv.name)
+        if want is None:
+            raise RuntimeError(f"{csv.name} has no entry in {RAW_SHA}")
+        actual = hashlib.sha256(csv.read_bytes()).hexdigest()
+        if actual != want:
+            raise RuntimeError(
+                f"SHA mismatch for {csv.name}: expected {want}, got {actual}. "
+                f"Refusing to proceed; regenerate {RAW_SHA} only if the source "
+                f"dataset has been intentionally updated."
+            )
 
-# Full calendar years available in the source data. 2013 starts in October and
-# 2025 ends in May, so neither is a full year and both are excluded.
-FULL_YEARS = list(range(2014, 2025))
+
+def build_stays(intakes: pd.DataFrame, outcomes: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Pair every intake with its outcome. Returns (stays, counts for the join report)."""
+    intakes = intakes.drop_duplicates().copy()
+    outcomes = outcomes.drop_duplicates().copy()
+    intakes["intake_time"] = pd.to_datetime(intakes["DateTime"], format="%m/%d/%Y %I:%M:%S %p")
+    # Wall clock as written: drop any "-05:00" style offset, see the module docstring.
+    outcomes["outcome_time"] = pd.to_datetime(outcomes["DateTime"].str[:19], format="%Y-%m-%dT%H:%M:%S")
+    outcomes = outcomes.dropna(subset=["Outcome Type"])
+
+    intakes = intakes.sort_values(["Animal ID", "intake_time"])
+    intakes["next_intake_time"] = intakes.groupby("Animal ID")["intake_time"].shift(-1)
+
+    paired = pd.merge_asof(
+        intakes.sort_values("intake_time"),
+        outcomes[["Animal ID", "outcome_time", "Outcome Type"]].sort_values("outcome_time"),
+        left_on="intake_time", right_on="outcome_time", by="Animal ID",
+        direction="forward",
+    )
+    has_outcome = paired["outcome_time"].notna()
+    before_next = paired["next_intake_time"].isna() | (paired["outcome_time"] < paired["next_intake_time"])
+    stays = paired[has_outcome & before_next][STAY_COLUMNS].reset_index(drop=True)
+
+    counts = {
+        "intakes": int(len(intakes)),
+        "outcomes_with_type": int(len(outcomes)),
+        "stays": int(len(stays)),
+        "intakes_without_outcome": int((~has_outcome).sum()),
+        "intakes_whose_next_outcome_follows_a_later_intake": int((has_outcome & ~before_next).sum()),
+        "outcomes_not_in_any_stay": int(len(outcomes) - len(stays)),
+    }
+    return stays, counts
 
 
 def _write_parquet(df: pd.DataFrame, path: Path, extra_meta: dict | None = None) -> None:
@@ -72,24 +131,22 @@ def _write_parquet(df: pd.DataFrame, path: Path, extra_meta: dict | None = None)
 
 
 def prepare() -> None:
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    BY_YEAR_DIR.mkdir(exist_ok=True)
-
+    BY_YEAR_DIR.mkdir(parents=True, exist_ok=True)
     _verify_raw_sha()
-    df = pd.read_csv(RAW_CSV)
-    _write_parquet(df, RAW_PARQUET)
-    print(f"Saved {len(df)} rows to {RAW_PARQUET}")
 
-    clean = df.dropna(subset=["Outcome Type"]).copy()
-    if "Outcome Subtype" in clean.columns:
-        clean = clean.drop(columns=["Outcome Subtype"])
-    clean["_year"] = pd.to_datetime(clean["DateTime"], format="ISO8601", utc=True).dt.year
+    stays, counts = build_stays(pd.read_csv(INTAKES_CSV), pd.read_csv(OUTCOMES_CSV))
+    print(f"{counts['stays']} stays from {counts['intakes']} intakes "
+          f"and {counts['outcomes_with_type']} outcomes")
 
-    for year in FULL_YEARS:
-        chunk = clean[clean["_year"] == year].drop(columns=["_year"])
-        out = BY_YEAR_DIR / f"{year}.parquet"
-        _write_parquet(chunk, out, extra_meta={"year": str(year), "rows": str(len(chunk))})
-        print(f"  {year}: {len(chunk):>6d} rows -> {out}")
+    year = stays["intake_time"].dt.year
+    counts["stays_per_intake_year"] = {}
+    for y in FULL_YEARS:
+        chunk = stays[year == y]
+        out = BY_YEAR_DIR / f"{y}.parquet"
+        _write_parquet(chunk, out, extra_meta={"year": str(y), "rows": str(len(chunk))})
+        counts["stays_per_intake_year"][str(y)] = int(len(chunk))
+        print(f"  {y}: {len(chunk):>6d} stays -> {out}")
+    JOIN_REPORT.write_text(json.dumps(counts, indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":

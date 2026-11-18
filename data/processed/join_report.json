@@ -1,0 +1,21 @@
+{
+  "intakes": 173776,
+  "outcomes_with_type": 173703,
+  "stays": 172098,
+  "intakes_without_outcome": 1622,
+  "intakes_whose_next_outcome_follows_a_later_intake": 56,
+  "outcomes_not_in_any_stay": 1605,
+  "stays_per_intake_year": {
+    "2014": 18597,
+    "2015": 18643,
+    "2016": 17610,
+    "2017": 17432,
+    "2018": 16860,
+    "2019": 19610,
+    "2020": 9537,
+    "2021": 12006,
+    "2022": 11861,
+    "2023": 11179,
+    "2024": 11659
+  }
+}

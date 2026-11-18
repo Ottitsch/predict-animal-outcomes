@@ -1,5 +1,5 @@
 """
-Loaders for the per-year cleaned datasets produced by ``prepare_data.py``.
+Loaders for the per-year stay datasets produced by ``data/prepare_data.py``.
 
 The training and robustness steps of the flow only ever read data through this
 module so that the on-disk layout and feature schema live in one place.
@@ -14,10 +14,17 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 BY_YEAR_DIR = ROOT / "data" / "processed" / "by_year"
 
-# Feature schema. Kept tiny and intentionally simple ("very simple model").
+# Feature schema. Every feature is known when the animal arrives, because that
+# is when the prediction would be made. The first version used "Sex upon
+# Outcome" and "Age upon Outcome" instead, which are recorded when the animal
+# leaves and leak the answer (see data/prepare_data.py). Intake month and the
+# number of earlier intakes were tried and moved holdout accuracy by less than
+# 0.1 points, so they are left out.
 # Categorical columns are one-hot encoded inside the training pipeline; the
 # raw column list is what the model contract advertises to consumers.
-CATEGORICAL_FEATURES = ["Animal Type", "Sex upon Outcome", "Breed", "Color"]
+CATEGORICAL_FEATURES = [
+    "Animal Type", "Intake Type", "Intake Condition", "Sex upon Intake", "Breed", "Color",
+]
 NUMERIC_FEATURES = ["age_days"]
 FEATURE_COLUMNS = CATEGORICAL_FEATURES + NUMERIC_FEATURES
 TARGET_COLUMN = "Outcome Type"
@@ -36,18 +43,18 @@ def _age_to_days(value: object) -> float | None:
         return None
     unit = parts[1].lower().rstrip("s")
     factor = {"day": 1, "week": 7, "month": 30, "year": 365}.get(unit)
-    if factor is None:
+    if factor is None or n < 0:  # a handful of intakes record ages like "-1 years"
         return None
     return n * factor
 
 
 def load_year(year: int) -> pd.DataFrame:
-    """Load a single per-year parquet file with engineered features."""
+    """Load the stays that started in ``year``, with engineered features."""
     path = BY_YEAR_DIR / f"{year}.parquet"
     if not path.exists():
         raise FileNotFoundError(f"missing dataset for year {year}: {path}")
     df = pd.read_parquet(path)
-    df["age_days"] = df["Age upon Outcome"].apply(_age_to_days)
+    df["age_days"] = df["Age upon Intake"].apply(_age_to_days)
     return df
 
 
