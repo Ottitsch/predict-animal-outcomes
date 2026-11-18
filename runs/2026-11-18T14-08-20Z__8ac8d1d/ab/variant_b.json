@@ -1,0 +1,9 @@
+{
+  "test_id": "all_years_vs_recent",
+  "variant": "B",
+  "run_id": "2026-11-18T14-07-09Z__8ac8d1d",
+  "segment_year": 2024,
+  "n_rows": 5789,
+  "accuracy": 0.7039212299188116,
+  "macro_f1": 0.26907203356430304
+}

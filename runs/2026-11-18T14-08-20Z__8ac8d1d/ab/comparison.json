@@ -1,0 +1,57 @@
+{
+  "test_id": "all_years_vs_recent",
+  "segment_year": 2024,
+  "variant_a": {
+    "test_id": "all_years_vs_recent",
+    "variant": "A",
+    "run_id": "2026-11-18T14-05-43Z__8ac8d1d",
+    "segment_year": 2024,
+    "n_rows": 5870,
+    "accuracy": 0.6921635434412265,
+    "macro_f1": 0.298116623471644
+  },
+  "variant_b": {
+    "test_id": "all_years_vs_recent",
+    "variant": "B",
+    "run_id": "2026-11-18T14-07-09Z__8ac8d1d",
+    "segment_year": 2024,
+    "n_rows": 5789,
+    "accuracy": 0.7039212299188116,
+    "macro_f1": 0.26907203356430304
+  },
+  "n_bootstrap": 2000,
+  "bootstrap_seed": 0,
+  "split": {
+    "n_rows_a": 5870,
+    "n_rows_b": 5789,
+    "macro_f1_b_minus_a": -0.02904458990734099,
+    "macro_f1_b_minus_a_ci95": [
+      -0.04262707509226756,
+      0.019791698482008534
+    ],
+    "accuracy_b_minus_a": 0.011757686477585017,
+    "accuracy_b_minus_a_ci95": [
+      -0.00469271893501833,
+      0.028640784834540512
+    ]
+  },
+  "paired": {
+    "n_rows": 11659,
+    "rows_where_versions_disagree": 576,
+    "macro_f1_a": 0.2662414735161962,
+    "macro_f1_b": 0.26797507711857205,
+    "accuracy_a": 0.6972296080281327,
+    "accuracy_b": 0.6963719015352946,
+    "macro_f1_b_minus_a": 0.0017336036023758439,
+    "macro_f1_b_minus_a_ci95": [
+      -0.0016378576274659455,
+      0.005819158747975131
+    ],
+    "accuracy_b_minus_a": -0.0008577064928381173,
+    "accuracy_b_minus_a_ci95": [
+      -0.0042027618149069745,
+      0.0026610343940303783
+    ]
+  },
+  "decision_by_paired_macro_f1": "no significant difference"
+}

@@ -1,0 +1,617 @@
+{
+  "created": 1795010833.4924417,
+  "duration": 1.268470287322998,
+  "exitcode": 0,
+  "root": "/home/pc/pao-work",
+  "environment": {},
+  "summary": {
+    "passed": 17,
+    "total": 17,
+    "collected": 17
+  },
+  "collectors": [
+    {
+      "nodeid": "",
+      "outcome": "passed",
+      "result": [
+        {
+          "nodeid": "tests",
+          "type": "Dir"
+        }
+      ]
+    },
+    {
+      "nodeid": "tests/test_distributions.py",
+      "outcome": "passed",
+      "result": [
+        {
+          "nodeid": "tests/test_distributions.py::test_animal_type_values_in_expected_set",
+          "type": "Function",
+          "lineno": 65
+        },
+        {
+          "nodeid": "tests/test_distributions.py::test_animal_type_dogs_and_cats_dominate",
+          "type": "Function",
+          "lineno": 75
+        },
+        {
+          "nodeid": "tests/test_distributions.py::test_intake_type_values_in_expected_set",
+          "type": "Function",
+          "lineno": 86
+        },
+        {
+          "nodeid": "tests/test_distributions.py::test_outcome_type_values_in_expected_set",
+          "type": "Function",
+          "lineno": 98
+        },
+        {
+          "nodeid": "tests/test_distributions.py::test_outcome_type_adoption_rate_in_range",
+          "type": "Function",
+          "lineno": 108
+        }
+      ]
+    },
+    {
+      "nodeid": "tests/test_missing_values.py",
+      "outcome": "passed",
+      "result": [
+        {
+          "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Animal ID]",
+          "type": "Function",
+          "lineno": 31
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Animal Type]",
+          "type": "Function",
+          "lineno": 31
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Intake Type]",
+          "type": "Function",
+          "lineno": 31
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Intake Condition]",
+          "type": "Function",
+          "lineno": 31
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[intake_time]",
+          "type": "Function",
+          "lineno": 31
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[outcome_time]",
+          "type": "Function",
+          "lineno": 31
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Outcome Type]",
+          "type": "Function",
+          "lineno": 31
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_descriptive_columns_mostly_not_null[Sex upon Intake]",
+          "type": "Function",
+          "lineno": 38
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_descriptive_columns_mostly_not_null[Age upon Intake]",
+          "type": "Function",
+          "lineno": 38
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_descriptive_columns_mostly_not_null[Breed]",
+          "type": "Function",
+          "lineno": 38
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_descriptive_columns_mostly_not_null[Color]",
+          "type": "Function",
+          "lineno": 38
+        },
+        {
+          "nodeid": "tests/test_missing_values.py::test_no_stay_ends_before_it_starts",
+          "type": "Function",
+          "lineno": 45
+        }
+      ]
+    },
+    {
+      "nodeid": "tests",
+      "outcome": "passed",
+      "result": [
+        {
+          "nodeid": "tests/test_distributions.py",
+          "type": "Module"
+        },
+        {
+          "nodeid": "tests/test_missing_values.py",
+          "type": "Module"
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "nodeid": "tests/test_distributions.py::test_animal_type_values_in_expected_set",
+      "lineno": 65,
+      "outcome": "passed",
+      "keywords": [
+        "test_animal_type_values_in_expected_set",
+        "test_distributions.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.14158231499999374,
+        "outcome": "passed",
+        "log": [
+          {
+            "name": "great_expectations.data_context.types.base",
+            "msg": "Created temporary directory '/tmp/tmpcvxtd1ra' for ephemeral docs site",
+            "args": null,
+            "levelname": "INFO",
+            "levelno": 20,
+            "pathname": "/home/pc/pao-venv/lib/python3.13/site-packages/great_expectations/data_context/types/base.py",
+            "filename": "base.py",
+            "module": "base",
+            "exc_info": null,
+            "exc_text": null,
+            "stack_info": null,
+            "lineno": 1401,
+            "funcName": "__init__",
+            "created": 1795010832.274769,
+            "msecs": 274.0,
+            "relativeCreated": 2262.447332,
+            "thread": 139374240436224,
+            "threadName": "MainThread",
+            "processName": "MainProcess",
+            "process": 1659,
+            "taskName": null
+          }
+        ]
+      },
+      "call": {
+        "duration": 0.08591389499997604,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/10 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/10 [00:00<?, ?it/s]\rCalculating Metrics:  20%|\u2588\u2588        | 2/10 [00:00<00:00, 6260.16it/s]\rCalculating Metrics:  20%|\u2588\u2588        | 2/10 [00:00<00:00, 5171.77it/s]\rCalculating Metrics:  30%|\u2588\u2588\u2588       | 3/10 [00:00<00:00, 6967.28it/s]\rCalculating Metrics:  30%|\u2588\u2588\u2588       | 3/10 [00:00<00:00, 6351.80it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 5/10 [00:00<00:00, 1898.56it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 5/10 [00:00<00:00, 1816.35it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1115.54it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1102.63it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1098.91it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1092.67it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00012078599999654216,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_distributions.py::test_animal_type_dogs_and_cats_dominate",
+      "lineno": 75,
+      "outcome": "passed",
+      "keywords": [
+        "test_animal_type_dogs_and_cats_dominate",
+        "test_distributions.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0002730450000001383,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.006622303000000329,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.0001061660000232223,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_distributions.py::test_intake_type_values_in_expected_set",
+      "lineno": 86,
+      "outcome": "passed",
+      "keywords": [
+        "test_intake_type_values_in_expected_set",
+        "test_distributions.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00016218700000081299,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.08540660899998898,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/10 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/10 [00:00<?, ?it/s]\rCalculating Metrics:  20%|\u2588\u2588        | 2/10 [00:00<00:00, 7847.15it/s]\rCalculating Metrics:  20%|\u2588\u2588        | 2/10 [00:00<00:00, 6355.01it/s]\rCalculating Metrics:  30%|\u2588\u2588\u2588       | 3/10 [00:00<00:00, 8461.94it/s]\rCalculating Metrics:  30%|\u2588\u2588\u2588       | 3/10 [00:00<00:00, 7626.01it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 5/10 [00:00<00:00, 2272.60it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 5/10 [00:00<00:00, 2182.26it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1471.38it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1440.05it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1433.22it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1422.57it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00010801100000890074,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_distributions.py::test_outcome_type_values_in_expected_set",
+      "lineno": 98,
+      "outcome": "passed",
+      "keywords": [
+        "test_outcome_type_values_in_expected_set",
+        "test_distributions.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00016657699998745557,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.08059069899999827,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/10 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/10 [00:00<?, ?it/s]\rCalculating Metrics:  20%|\u2588\u2588        | 2/10 [00:00<00:00, 5559.05it/s]\rCalculating Metrics:  20%|\u2588\u2588        | 2/10 [00:00<00:00, 4712.70it/s]\rCalculating Metrics:  30%|\u2588\u2588\u2588       | 3/10 [00:00<00:00, 6459.40it/s]\rCalculating Metrics:  30%|\u2588\u2588\u2588       | 3/10 [00:00<00:00, 5977.63it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 5/10 [00:00<00:00, 2335.88it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 5/10 [00:00<00:00, 2264.99it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1573.67it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1538.12it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1527.98it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 10/10 [00:00<00:00, 1517.09it/s]\n"
+      },
+      "teardown": {
+        "duration": 9.949700000788653e-05,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_distributions.py::test_outcome_type_adoption_rate_in_range",
+      "lineno": 108,
+      "outcome": "passed",
+      "keywords": [
+        "test_outcome_type_adoption_rate_in_range",
+        "test_distributions.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00015652099997964797,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.005420506999996633,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00010097599999880913,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Animal ID]",
+      "lineno": 31,
+      "outcome": "passed",
+      "keywords": [
+        "test_required_columns_not_null[Animal ID]",
+        "parametrize",
+        "pytestmark",
+        "Animal ID",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0002190900000016427,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.07625120099999094,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 7564.12it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6236.88it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8371.86it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7630.63it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6800.66it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6326.25it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 2136.00it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 2082.19it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 2066.54it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 2043.88it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011558799999988878,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Animal Type]",
+      "lineno": 31,
+      "outcome": "passed",
+      "keywords": [
+        "test_required_columns_not_null[Animal Type]",
+        "parametrize",
+        "pytestmark",
+        "Animal Type",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00022124800000256073,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.07571196500001065,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 8065.97it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6553.60it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8695.86it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7859.41it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6184.01it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5733.84it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1935.65it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1878.43it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1864.76it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1845.37it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011818699999821547,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Intake Type]",
+      "lineno": 31,
+      "outcome": "passed",
+      "keywords": [
+        "test_required_columns_not_null[Intake Type]",
+        "parametrize",
+        "pytestmark",
+        "Intake Type",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0002044969999985824,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.07615820899999903,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 10485.76it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 8104.94it/s] \rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 10477.03it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 9313.78it/s] \rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 7387.59it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6743.25it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1874.13it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1826.99it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1813.95it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1796.85it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011274999999955071,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Intake Condition]",
+      "lineno": 31,
+      "outcome": "passed",
+      "keywords": [
+        "test_required_columns_not_null[Intake Condition]",
+        "parametrize",
+        "pytestmark",
+        "Intake Condition",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0003215990000171587,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.08287483000000861,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 7237.80it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6004.73it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8004.40it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7311.40it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5964.17it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5548.02it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1817.78it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1775.84it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1764.54it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1746.72it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00015897199997993994,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[intake_time]",
+      "lineno": 31,
+      "outcome": "passed",
+      "keywords": [
+        "test_required_columns_not_null[intake_time]",
+        "parametrize",
+        "pytestmark",
+        "intake_time",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00022727200001781966,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.07944130399999949,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6533.18it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 5457.78it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7384.34it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 6772.29it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5464.89it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5135.36it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 2024.03it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1971.82it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1957.33it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1936.43it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011255699999423996,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[outcome_time]",
+      "lineno": 31,
+      "outcome": "passed",
+      "keywords": [
+        "test_required_columns_not_null[outcome_time]",
+        "parametrize",
+        "pytestmark",
+        "outcome_time",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00023271800000657095,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.07554882100001237,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 8413.85it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6620.84it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8780.82it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7436.71it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5696.85it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5202.24it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 2025.01it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1978.45it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1964.43it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1943.38it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00010974700001042947,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_required_columns_not_null[Outcome Type]",
+      "lineno": 31,
+      "outcome": "passed",
+      "keywords": [
+        "test_required_columns_not_null[Outcome Type]",
+        "parametrize",
+        "pytestmark",
+        "Outcome Type",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0002076650000049085,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.0755672750000258,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 7584.64it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6223.00it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8338.58it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7598.38it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5870.26it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 5484.54it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1942.71it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1892.95it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1880.43it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1862.17it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011068399999203393,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_descriptive_columns_mostly_not_null[Sex upon Intake]",
+      "lineno": 38,
+      "outcome": "passed",
+      "keywords": [
+        "test_descriptive_columns_mostly_not_null[Sex upon Intake]",
+        "parametrize",
+        "pytestmark",
+        "Sex upon Intake",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0002029450000122779,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.0745099410000023,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 8322.03it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6563.86it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8744.21it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7928.74it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6878.73it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6250.83it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1472.72it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1439.73it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1429.73it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1416.76it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011096800000132134,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_descriptive_columns_mostly_not_null[Age upon Intake]",
+      "lineno": 38,
+      "outcome": "passed",
+      "keywords": [
+        "test_descriptive_columns_mostly_not_null[Age upon Intake]",
+        "parametrize",
+        "pytestmark",
+        "Age upon Intake",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0002124499999922591,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.07514671800001338,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 8793.09it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 7102.97it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 9418.35it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8507.72it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 7240.92it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6721.64it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1970.89it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1919.26it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1906.39it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1886.78it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011614800001780168,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_descriptive_columns_mostly_not_null[Breed]",
+      "lineno": 38,
+      "outcome": "passed",
+      "keywords": [
+        "test_descriptive_columns_mostly_not_null[Breed]",
+        "parametrize",
+        "pytestmark",
+        "Breed",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00020206199999961427,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.07788761999998428,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 7275.46it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6052.39it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8118.01it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7419.17it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6512.89it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6078.70it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1642.89it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1600.19it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1591.09it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1577.47it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011251099999753933,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_descriptive_columns_mostly_not_null[Color]",
+      "lineno": 38,
+      "outcome": "passed",
+      "keywords": [
+        "test_descriptive_columns_mostly_not_null[Color]",
+        "parametrize",
+        "pytestmark",
+        "Color",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00020327500001826593,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.07369075099998668,
+        "outcome": "passed",
+        "stderr": "\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:   0%|          | 0/8 [00:00<?, ?it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 7869.24it/s]\rCalculating Metrics:  25%|\u2588\u2588\u258c       | 2/8 [00:00<00:00, 6472.69it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 8665.92it/s]\rCalculating Metrics:  38%|\u2588\u2588\u2588\u258a      | 3/8 [00:00<00:00, 7869.24it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6705.52it/s]\rCalculating Metrics:  50%|\u2588\u2588\u2588\u2588\u2588     | 4/8 [00:00<00:00, 6246.17it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1930.52it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1882.65it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1870.06it/s]\rCalculating Metrics: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 8/8 [00:00<00:00, 1851.28it/s]\n"
+      },
+      "teardown": {
+        "duration": 0.00011043599999993603,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": "tests/test_missing_values.py::test_no_stay_ends_before_it_starts",
+      "lineno": 45,
+      "outcome": "passed",
+      "keywords": [
+        "test_no_stay_ends_before_it_starts",
+        "test_missing_values.py",
+        "tests",
+        "pao-work",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00015142300000547948,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.0004733540000074754,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00017743199998676573,
+        "outcome": "passed"
+      }
+    }
+  ]
+}

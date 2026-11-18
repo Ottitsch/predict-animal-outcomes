@@ -1,0 +1,77 @@
+{
+  "run_id": "2026-11-18T14-07-09Z__8ac8d1d",
+  "git_sha": "8ac8d1d",
+  "started_at": "2026-11-18T14:07:09.683081+00:00",
+  "ended_at": "2026-11-18T14:08:07.178480+00:00",
+  "status": "passed",
+  "parameters": {
+    "train_years": "2019,2020,2021,2022,2023",
+    "holdout_year": 2024,
+    "simulate_interrupt": false,
+    "use_containers": false,
+    "model_C": 1.0,
+    "model_class_weight": "",
+    "model_solver": "lbfgs",
+    "drop_features": "",
+    "scale_age": true
+  },
+  "steps": {
+    "data_tests": {
+      "status": "passed",
+      "returncode": 0,
+      "duration_s": 4.406,
+      "image": "host"
+    },
+    "train": {
+      "status": "passed",
+      "returncode": 0,
+      "duration_s": 45.697,
+      "image": "host",
+      "train_accuracy": 0.6544788907929584
+    },
+    "robustness": {
+      "status": "passed",
+      "returncode": 0,
+      "duration_s": 2.156,
+      "image": "host",
+      "report": {
+        "run_id": "2026-11-18T14-07-09Z__8ac8d1d",
+        "holdout_year": 2024,
+        "n_holdout_rows": 11659,
+        "majority_baseline_accuracy": 0.6244103267861738,
+        "holdout_accuracy": 0.6963719015352946,
+        "train_accuracy": 0.6544788907929584,
+        "margin_over_baseline": 0.0719615747491208,
+        "train_holdout_gap": -0.0418930107423362,
+        "holdout_macro_f1": 0.26797507711857205,
+        "majority_baseline_macro_f1": 0.08542044341188965,
+        "holdout_class_share": {
+          "Adoption": 0.6244103267861738,
+          "Transfer": 0.22446178917574405,
+          "Return to Owner": 0.07144695085341796,
+          "Euthanasia": 0.04914658203962604,
+          "Died": 0.012779826743288447,
+          "Rto-Adopt": 0.010378248563341625,
+          "Disposal": 0.006690110644137576,
+          "Missing": 0.0005146238957028905,
+          "Lost": 0.00017154129856763016
+        },
+        "holdout_recall_per_class": {
+          "Adoption": 0.8663461538461539,
+          "Died": 0.006711409395973154,
+          "Disposal": 0.0,
+          "Euthanasia": 0.5479930191972077,
+          "Lost": 0.0,
+          "Missing": 0.0,
+          "Return to Owner": 0.4969987995198079,
+          "Rto-Adopt": 0.0,
+          "Transfer": 0.4138326327856324
+        },
+        "passed_majority": true,
+        "passed_gap": true,
+        "passed": true
+      }
+    }
+  },
+  "train_accuracy": 0.6544788907929584
+}
