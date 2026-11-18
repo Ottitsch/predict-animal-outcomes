@@ -3,9 +3,10 @@ Metaflow flow: offline A/B comparison of two model versions.
 
 Two registered model versions (two run ids) are compared head-to-head on a
 shared unseen segment (default: the holdout year 2024). The flow forks into two
-parallel branches -- one per version -- each of which scores *its half* of the
-segment in an isolated ``pao-ab`` container, then a join step compares the two
-halves on accuracy and macro-F1.
+parallel branches -- one per version -- each of which scores the segment in an
+isolated ``pao-ab`` container, then a join step compares them with bootstrap
+confidence intervals (also in the ``pao-ab`` container) and only names a
+winner when the difference is significant. See predict_animal_outcomes/ab_test.py.
 
 Traffic split, salting, and running multiple tests are all explained in
 predict_animal_outcomes/ab_test.py; in short, each row is assigned to a variant by hashing
@@ -13,7 +14,8 @@ predict_animal_outcomes/ab_test.py; in short, each row is assigned to a variant 
 per test via the ``test_id`` salt.
 
 Outputs are written under a fresh A/B run directory at
-``runs/<ab-run-id>/ab/``: ``variant_a.json``, ``variant_b.json`` and the joined
+``runs/<ab-run-id>/ab/``: ``variant_a.json``, ``variant_b.json``, the per row
+``predictions_a.csv`` and ``predictions_b.csv``, and the joined
 ``comparison.json``.
 
 Run (containers):
@@ -92,7 +94,7 @@ class ABTestFlow(FlowSpec):
         out_dir = containers.ROOT / self.out_subpath
         stdout_log = out_dir / f"stdout_{variant.lower()}.log"
         cmd = [
-            "python", "-m", "predict_animal_outcomes.ab_test",
+            "python", "-m", "predict_animal_outcomes.ab_test", "score",
             "--run-id", run_id,
             "--variant", variant,
             "--test-id", self.test_id,
@@ -117,22 +119,30 @@ class ABTestFlow(FlowSpec):
         self.merge_artifacts(inputs, include=["ab_run_id", "out_subpath", "test_id"])
         reports = {inp.variant_report["variant"]: inp.variant_report for inp in inputs}
         a, b = reports["A"], reports["B"]
-        winner = (
-            "tie" if a["macro_f1"] == b["macro_f1"]
-            else "A" if a["macro_f1"] > b["macro_f1"] else "B"
-        )
+        out_dir = containers.ROOT / self.out_subpath
+        # The bootstrap needs numpy, which the driver image doesn't carry, so the
+        # comparison runs in the ab container like the scoring did.
+        cmd = [
+            "python", "-m", "predict_animal_outcomes.ab_test", "compare",
+            "--dir", "/out" if containers.USE_CONTAINERS else str(out_dir),
+            "--test-id", self.test_id,
+        ]
+        stdout_log = out_dir / "stdout_compare.log"
+        if containers.USE_CONTAINERS:
+            rc = containers.docker_run("ab", self.out_subpath, cmd, stdout_log)
+        else:
+            rc = containers.host_run(cmd, stdout_log)
+        if rc != 0:
+            raise RuntimeError(f"comparison failed with exit={rc}; see {stdout_log}")
+        stats = json.loads((out_dir / "comparison_stats.json").read_text())
+        (out_dir / "comparison_stats.json").unlink()
         comparison = {
             "test_id": self.test_id,
             "segment_year": a["segment_year"],
             "variant_a": a,
             "variant_b": b,
-            "deltas": {
-                "accuracy_b_minus_a": b["accuracy"] - a["accuracy"],
-                "macro_f1_b_minus_a": b["macro_f1"] - a["macro_f1"],
-            },
-            "winner_by_macro_f1": winner,
+            **{k: v for k, v in stats.items() if k != "test_id"},
         }
-        out_dir = containers.ROOT / self.out_subpath
         (out_dir / "comparison.json").write_text(json.dumps(comparison, indent=2))
         self.comparison = comparison
         self.next(self.end)
@@ -140,10 +150,16 @@ class ABTestFlow(FlowSpec):
     @step
     def end(self):
         c = self.comparison
+        p = c["paired"]
+        lo, hi = p["macro_f1_b_minus_a_ci95"]
         print("=== A/B complete ===")
-        print(f"  A: acc={c['variant_a']['accuracy']:.4f} f1={c['variant_a']['macro_f1']:.4f}")
-        print(f"  B: acc={c['variant_b']['accuracy']:.4f} f1={c['variant_b']['macro_f1']:.4f}")
-        print(f"  winner_by_macro_f1 = {c['winner_by_macro_f1']}")
+        print(f"  split  A: acc={c['variant_a']['accuracy']:.4f} f1={c['variant_a']['macro_f1']:.4f}"
+              f"  (n={c['variant_a']['n_rows']})")
+        print(f"  split  B: acc={c['variant_b']['accuracy']:.4f} f1={c['variant_b']['macro_f1']:.4f}"
+              f"  (n={c['variant_b']['n_rows']})")
+        print(f"  paired: macro F1 B-A = {p['macro_f1_b_minus_a']:+.4f}  95% CI [{lo:+.4f}, {hi:+.4f}]"
+              f"  ({p['rows_where_versions_disagree']} of {p['n_rows']} rows differ)")
+        print(f"  decision = {c['decision_by_paired_macro_f1']}")
 
 
 if __name__ == "__main__":
