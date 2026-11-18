@@ -1,10 +1,11 @@
-# Top-level requirements for running the full Metaflow flow locally.
-# Per-step requirements live under requirements/ for environments that build
-# or run each step in isolation (e.g. Docker containers).
+# Everything needed to run the flows host natively and the unit tests; the union
+# of the per step files under docker/requirements/ (one per container image).
 pandas==3.0.2
 pyarrow==23.0.1
 great_expectations==1.17.0
 pytest==9.0.3
+pytest-json-report==1.5.0
+pyyaml==6.0.3
 metaflow==2.19.24
 scikit-learn==1.8.0
 skops==0.14.0
