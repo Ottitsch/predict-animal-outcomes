@@ -18,10 +18,11 @@ the Docker socket, so no ``HOST_PROJECT_DIR`` env var is needed.
 
 How the host knows when a step finishes
 ---------------------------------------
-``docker run`` (foreground) is blocking. ``subprocess.run([..., "docker", "run"
-, ...], check=True)`` returns when the step container's PID 1 exits and
-propagates the exit code. Non-zero exit -> CalledProcessError -> Metaflow stops
-the flow. No polling, no healthchecks, no signals.
+``docker run`` (foreground) is blocking. Each step is spawned with
+``subprocess.Popen`` (see predict_animal_outcomes/containers.py), its output is
+streamed into the step's ``stdout.log``, and the call returns the container's
+exit code once its PID 1 exits. A non-zero code makes the step raise, which
+stops the flow. No polling, no healthchecks, no signals.
 
 Run locally:
     docker/build.sh
@@ -57,89 +58,30 @@ sys.path.insert(0, str(ROOT))
 import yaml
 from metaflow import FlowSpec, Parameter, step
 
-USE_CONTAINERS = os.environ.get("USE_CONTAINERS", "1") != "0"
+from predict_animal_outcomes import containers
+
+USE_CONTAINERS = containers.USE_CONTAINERS
 
 # training_defaults.yml sits next to this driver in flows/.
 _cfg_path = FLOWS_DIR / "training_defaults.yml"
 _cfg = yaml.safe_load(_cfg_path.read_text()) if _cfg_path.exists() else {}
 
 
-def _detect_host_project_dir() -> str:
-    """Return the host-side path that is bind-mounted to /work.
-
-    When pao-host runs inside Docker, bind-mount paths passed to sibling
-    ``docker run`` calls are resolved by the host daemon — so we need the
-    *host* path, not /work. We get it by asking the daemon to inspect this
-    container (identified by its hostname, which Docker sets to the short
-    container ID) and reading the Source of the /work mount.
-
-    Falls back to ROOT when running outside a container or if the socket is
-    unavailable (e.g. USE_CONTAINERS=0 host-native mode).
-    """
-    if not USE_CONTAINERS:
-        return str(ROOT)
-    try:
-        import socket
-        cid = socket.gethostname()
-        result = subprocess.run(
-            ["docker", "inspect", "--format", "{{json .Mounts}}", cid],
-            capture_output=True, text=True, check=True,
-        )
-        for mount in json.loads(result.stdout):
-            if mount.get("Destination") == "/work":
-                return mount["Source"]
-    except Exception:
-        pass
-    return str(ROOT)
+# Step name -> its pao-<name> image. The spawning itself lives in
+# predict_animal_outcomes/containers.py, shared with the monitoring and A/B flows.
+STEP_IMAGES = {"data_tests": "data-tests", "train": "train", "robustness": "robustness"}
 
 
-HOST_PROJECT_DIR = _detect_host_project_dir()
-IMAGE_TAG = os.environ.get("PAO_IMAGE_TAG", "dev")
-
-IMAGES = {
-    "data_tests": f"pao-data-tests:{IMAGE_TAG}",
-    "train":      f"pao-train:{IMAGE_TAG}",
-    "robustness": f"pao-robustness:{IMAGE_TAG}",
-}
+def _run_step(step_name: str, run_id: str, cmd: list[str], stdout_log: Path) -> int:
+    """Run one step in its own container (or on the host); return its exit code."""
+    if USE_CONTAINERS:
+        return containers.docker_run(STEP_IMAGES[step_name], f"runs/{run_id}/{step_name}",
+                                     cmd, stdout_log)
+    return containers.host_run(cmd, stdout_log)
 
 
-def _docker_run(step_name: str, run_id: str, cmd: list[str], stdout_log: Path) -> int:
-    """Spawn a sibling container for one step and stream its output to a log file.
-
-    Blocks until the container exits. Returns the container's exit code.
-    """
-    image = IMAGES[step_name]
-    out_host = f"{HOST_PROJECT_DIR}/runs/{run_id}/{step_name}"
-    docker_cmd = [
-        "docker", "run", "--rm",
-        "-v", f"{HOST_PROJECT_DIR}:/work",
-        "-v", f"{out_host}:/out",
-        "-w", "/work",
-        image,
-        *cmd,
-    ]
-    print(f"[{step_name}] $ {' '.join(docker_cmd)}", flush=True)
-    with stdout_log.open("w") as f:
-        proc = subprocess.Popen(docker_cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True)
-        for line in proc.stdout:  # type: ignore[union-attr]
-            sys.stdout.write(line)
-            f.write(line)
-        proc.wait()
-    return proc.returncode
-
-
-def _host_run(cmd: list[str], stdout_log: Path) -> int:
-    """Same contract as _docker_run but runs the command on the host directly."""
-    print(f"[host] $ {' '.join(cmd)}", flush=True)
-    with stdout_log.open("w") as f:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, text=True, cwd=ROOT)
-        for line in proc.stdout:  # type: ignore[union-attr]
-            sys.stdout.write(line)
-            f.write(line)
-        proc.wait()
-    return proc.returncode
+def _image(step_name: str) -> str:
+    return containers.image(STEP_IMAGES[step_name]) if USE_CONTAINERS else "host"
 
 
 class AnimalOutcomeFlow(FlowSpec):
@@ -218,11 +160,9 @@ class AnimalOutcomeFlow(FlowSpec):
     def data_tests(self):
         """Run the data quality tests with pytest in an isolated container.
 
-        We do not gate the flow on this step's exit code: the test suite
-        intentionally includes one expected failure on the raw dataset (a known
-        data-quality issue we want surfaced but not blocking). A real
-        containerized test runner could be made strict by raising on non-zero
-        returncode here.
+        The tests check the exact per year stay files that training and the
+        robustness step read (the run's train years plus its holdout year). A
+        failing test stops the flow before a model is trained on bad data.
         """
         from predict_animal_outcomes import runs
 
@@ -230,24 +170,22 @@ class AnimalOutcomeFlow(FlowSpec):
         stdout_log = out_dir / "stdout.log"
         report = "/out/report.json" if USE_CONTAINERS else str(out_dir / "report.json")
         cmd = [
-            "python", "-m", "pytest", "tests/", "-q", f"--json-report", f"--json-report-file={report}", "--json-report-indent=2",
+            "python", "-m", "pytest", "tests/", "--ignore=tests/unit", "-q", "--json-report", f"--json-report-file={report}", "--json-report-indent=2",
             f"--train-years={self.train_years}",
             f"--holdout-year={self.holdout_year}",
         ]
         t0 = time.monotonic()
-        if USE_CONTAINERS:
-            rc = _docker_run("data_tests", self.run_id, cmd, stdout_log)
-        else:
-            rc = _host_run(cmd, stdout_log)
+        rc = _run_step("data_tests", self.run_id, cmd, stdout_log)
         duration = round(time.monotonic() - t0, 3)
         (out_dir / "returncode.txt").write_text(str(rc))
         runs.update_step(self.run_id, "data_tests",
-                         status="passed" if rc == 0 else "failed_nonblocking",
+                         status="passed" if rc == 0 else "failed",
                          returncode=rc, duration_s=duration,
-                         image=IMAGES["data_tests"] if USE_CONTAINERS else "host")
+                         image=_image("data_tests"))
         self.tests_returncode = rc
         if rc != 0:
-            print(f"[data_tests] pytest exit={rc} (non-blocking; see {stdout_log})")
+            runs.finalize(self.run_id, "failed")
+            raise RuntimeError(f"data tests failed with exit={rc}; see {stdout_log}")
         self.next(self.train)
 
     @step
@@ -278,22 +216,19 @@ class AnimalOutcomeFlow(FlowSpec):
         if self.simulate_interrupt:
             cmd.append("--simulate-interrupt")
         t0 = time.monotonic()
-        if USE_CONTAINERS:
-            rc = _docker_run("train", self.run_id, cmd, stdout_log)
-        else:
-            rc = _host_run(cmd, stdout_log)
+        rc = _run_step("train", self.run_id, cmd, stdout_log)
         duration = round(time.monotonic() - t0, 3)
         if rc != 0:
             runs.update_step(self.run_id, "train", status="failed",
                              returncode=rc, duration_s=duration,
-                             image=IMAGES["train"] if USE_CONTAINERS else "host")
+                             image=_image("train"))
             runs.finalize(self.run_id, "failed")
             raise RuntimeError(f"train step failed with exit={rc}")
         summary = json.loads((out_dir / "summary.json").read_text())
         self.train_accuracy = summary["train_accuracy"]
         runs.update_step(self.run_id, "train", status="passed",
                          returncode=rc, duration_s=duration,
-                         image=IMAGES["train"] if USE_CONTAINERS else "host",
+                         image=_image("train"),
                          train_accuracy=self.train_accuracy)
         self.next(self.robustness)
 
@@ -311,10 +246,7 @@ class AnimalOutcomeFlow(FlowSpec):
             "--out-dir", "/out" if USE_CONTAINERS else str(out_dir),
         ]
         t0 = time.monotonic()
-        if USE_CONTAINERS:
-            rc = _docker_run("robustness", self.run_id, cmd, stdout_log)
-        else:
-            rc = _host_run(cmd, stdout_log)
+        rc = _run_step("robustness", self.run_id, cmd, stdout_log)
         duration = round(time.monotonic() - t0, 3)
         report_path = out_dir / "report.json"
         report = json.loads(report_path.read_text()) if report_path.exists() else {}
@@ -322,7 +254,7 @@ class AnimalOutcomeFlow(FlowSpec):
         status = "passed" if rc == 0 else "failed"
         runs.update_step(self.run_id, "robustness", status=status,
                          returncode=rc, duration_s=duration,
-                         image=IMAGES["robustness"] if USE_CONTAINERS else "host",
+                         image=_image("robustness"),
                          report=report)
         if rc != 0:
             runs.finalize(self.run_id, "failed")

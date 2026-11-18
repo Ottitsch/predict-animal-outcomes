@@ -1,8 +1,7 @@
 """
 Shared helpers for spawning per-step containers from a flow driver.
 
-The training flow (flow.py) predates this module and keeps its own copy of the
-same logic; the monitoring and A/B flows use these helpers so the
+All three flows (training, monitoring, A/B) use these helpers, so the
 sibling-container spawning contract lives in one place. See flow.py's module
 docstring for the full description of the bind-mount / blocking-exit-code model;
 the short version:
